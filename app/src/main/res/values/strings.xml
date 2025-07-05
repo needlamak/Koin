@@ -1,3 +1,24 @@
 <resources>
     <string name="app_name">Koin</string>
+    
+    <!-- Notification Channel -->
+    <string name="channel_name_price_alerts">Price Alerts</string>
+    <string name="channel_description_price_alerts">Shows notifications when cryptocurrency prices reach your set thresholds</string>
+    
+    <!-- Notification Messages -->
+    <string name="notification_price_above_title">%s Price Alert</string>
+    <string name="notification_price_below_title">%s Price Drop</string>
+    <string name="notification_price_above_message">Price is now $%.2f (above your threshold of $%.2f)</string>
+    <string name="notification_price_below_message">Price dropped to $%.2f (below your threshold of $%.2f)</string>
+    <string name="notification_action_view_details">View Details</string>
+    <string name="notification_action_dismiss">Dismiss</string>
+    
+    <!-- WorkManager Status -->
+    <string name="workmanager_status_running">Price monitoring is active</string>
+    <string name="workmanager_status_stopped">Price monitoring is inactive</string>
+    <string name="workmanager_status_error">Error monitoring prices: %s</string>
+    
+    <!-- Common -->
+    <string name="error_network">Network error. Please check your connection.</string>
+    <string name="error_unknown">An unknown error occurred</string>
 </resources>

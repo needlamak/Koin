@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.implementation
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -19,6 +21,14 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Room schema
+
+    }
+
+    // Room schema location for source sets
+    sourceSets {
+        getByName("androidTest").assets.srcDirs("$projectDir/schemas")
     }
 
     buildTypes {
@@ -40,14 +50,31 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
+
+    implementation ("androidx.paging:paging-runtime-ktx:3.3.6")
+    implementation ("androidx.paging:paging-compose:3.3.6")
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
+    // Accompanist Pager for tab & horizontal pager
     // Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    
+    // WorkManager with Coroutines
+    implementation("androidx.hilt:hilt-work:1.1.0")
+    ksp("androidx.hilt:hilt-compiler:1.1.0")
+    implementation("androidx.work:work-runtime-ktx:2.10.2")
+
 
     // Compose UI
     implementation(platform(libs.androidx.compose.bom))
@@ -92,9 +119,29 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+    
+    // Room testing
+    testImplementation("androidx.room:room-testing:2.6.1")
+    
+    // Kotlin Coroutines Test
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    
+    // MockK for testing
+    testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("io.mockk:mockk-agent-jvm:1.13.8")
+    
+    // Turbine for Flow testing
+    testImplementation("app.cash.turbine:turbine:1.0.0")
 
     // Coil (Optional for image loading)
     implementation(libs.coil.compose)
+
+    // Charts
+    implementation("com.github.PhilJay:MPAndroidChart:3.1.0")
+    implementation("com.patrykandpatrick.vico:compose:1.13.1")
+    implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
+    implementation("com.patrykandpatrick.vico:core:1.13.1")
+    implementation("com.patrykandpatrick.vico:views:1.13.1")
 
     // Testing
     testImplementation(libs.junit)

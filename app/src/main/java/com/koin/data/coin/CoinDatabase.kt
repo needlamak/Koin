@@ -44,4 +44,4 @@ class Converters {
             Gson().fromJson(it, object : TypeToken<List<Double>>() {}.type)
         }
     }
-} 
+}

@@ -13,6 +13,11 @@ import javax.inject.Singleton
 abstract class RepositoryModule {
     @Binds
     @Singleton
+    abstract fun bindUserRepository(
+        localUserRepository: com.koin.data.user.LocalUserRepository
+    ): com.koin.domain.user.UserRepository
+    @Binds
+    @Singleton
     abstract fun bindCoinRepository(
         coinRepositoryImpl: CoinRepositoryImpl
     ): CoinRepository

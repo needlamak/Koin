@@ -48,7 +48,7 @@ fun Coin.toEntity(): CoinEntity {
         priceChangePercentage1h = priceChangePercentage1h,
         priceChangePercentage7d = priceChangePercentage7d,
         priceChangePercentage30d = priceChangePercentage30d,
-        sparklineData = sparklineData?.let { Gson().toJson(it) },
+        sparklineData = sparklineData,
         high24h = high24h,
         low24h = low24h,
         totalVolume = totalVolume,
@@ -77,9 +77,7 @@ fun CoinEntity.toDomain(): Coin {
         priceChangePercentage1h = priceChangePercentage1h,
         priceChangePercentage7d = priceChangePercentage7d,
         priceChangePercentage30d = priceChangePercentage30d,
-        sparklineData = sparklineData?.let {
-            Gson().fromJson(it, object : TypeToken<List<Double>>() {}.type)
-        },
+        sparklineData = sparklineData,
         high24h = high24h,
         low24h = low24h,
         totalVolume = totalVolume,

@@ -1,8 +1,3 @@
----
-description: 
-globs: 
-alwaysApply: true
----
 # True SSoT Crypto App Architecture (MVVM Clean Architecture)
 
 A crypto application using **True Single Source of Truth (SSoT)** with MVVM Clean Architecture, Jetpack Compose, comprehensive data caching, and optimal performance.
@@ -23,8 +18,53 @@ A crypto application using **True Single Source of Truth (SSoT)** with MVVM Clea
 - Configure build.gradle (project and app level) for Kotlin, Compose, and necessary plugins
 
 ### 2. Core Android Jetpack & Kotlin Dependencies
-Check build.gradle.kts(Project: Koin), gradle.kts(Module :app), and libs.versions.toml files to see the existing
-dependencies available to avoid duplication and removal
+```kotlin
+// Compose BOM for consistent versions
+implementation platform('androidx.compose:compose-bom:2024.02.00')
+implementation 'androidx.compose.ui:ui'
+implementation 'androidx.compose.ui:ui-tooling-preview'
+implementation 'androidx.compose.material3:material3'
+implementation 'androidx.compose.ui:ui-tooling'
+
+// Navigation
+implementation 'androidx.navigation:navigation-compose:2.7.6'
+
+// Lifecycle & ViewModel
+implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
+implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0'
+
+// Coroutines
+implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
+implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+```
+
+### 3. Networking Dependencies
+```kotlin
+// Retrofit
+implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+
+// OkHttp
+implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
+```
+
+### 4. Local Persistence Dependencies
+```kotlin
+// Room Database
+implementation 'androidx.room:room-runtime:2.6.1'
+implementation 'androidx.room:room-ktx:2.6.1'
+kapt 'androidx.room:room-compiler:2.6.1'
+```
+
+### 5. Dependency Injection Dependencies
+```kotlin
+// Dagger Hilt
+implementation 'com.google.dagger:hilt-android:2.48.1'
+kapt 'com.google.dagger:hilt-android-compiler:2.48.1'
+implementation 'androidx.hilt:hilt-navigation-compose:1.1.0'
+```
+
 ---
 
 ## II. Data Layer (True SSoT Hub)
@@ -745,6 +785,5 @@ abstract class RepositoryModule {
 - **Single Responsibility**: Each layer has clear purpose
 - **Easy Testing**: Mock repository for all testing scenarios
 - **Type Safety**: Strong typing throughout the architecture
-
 
 This architecture provides true Single Source of Truth with optimal performance, caching, and user experience!

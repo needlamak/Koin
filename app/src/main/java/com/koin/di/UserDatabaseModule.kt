@@ -2,8 +2,8 @@ package com.koin.di
 
 import android.content.Context
 import androidx.room.Room
-import com.koin.data.coin.CoinDao
-import com.koin.data.coin.CoinDatabase
+import com.koin.data.user.UserDao
+import com.koin.data.user.UserDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,19 +13,16 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DatabaseModule {
+object UserDatabaseModule {
     @Provides
     @Singleton
-    fun provideCoinDatabase(@ApplicationContext context: Context): CoinDatabase {
-        return Room.databaseBuilder(
+    fun provideUserDatabase(@ApplicationContext context: Context): UserDatabase =
+        Room.databaseBuilder(
             context,
-            CoinDatabase::class.java,
-            "coin_database"
+            UserDatabase::class.java,
+            UserDatabase.DATABASE_NAME
         ).build()
-    }
 
     @Provides
-    fun provideCoinDao(database: CoinDatabase): CoinDao {
-        return database.coinDao()
-    }
+    fun provideUserDao(db: UserDatabase): UserDao = db.userDao()
 }
