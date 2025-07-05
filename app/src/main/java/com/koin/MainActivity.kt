@@ -111,9 +111,3 @@ fun KoinApp() {
         }
     }
 }
-
-@Preview(showBackground = true)
-@Composable
-fun AppPreview() {
-    KoinApp()
-}

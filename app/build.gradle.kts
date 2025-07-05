@@ -96,6 +96,13 @@ dependencies {
     // Coil (Optional for image loading)
     implementation(libs.coil.compose)
 
+    // Charts
+    implementation("com.github.PhilJay:MPAndroidChart:3.1.0")
+    implementation("com.patrykandpatrick.vico:compose:1.13.1")
+    implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
+    implementation("com.patrykandpatrick.vico:core:1.13.1")
+    implementation("com.patrykandpatrick.vico:views:1.13.1")
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

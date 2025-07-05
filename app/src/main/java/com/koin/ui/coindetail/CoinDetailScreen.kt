@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,12 +12,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -26,17 +31,19 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import com.koin.domain.coin.Coin
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -48,17 +55,29 @@ fun CoinDetailScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var selectedTimeRange by remember { mutableStateOf(TimeRange.ONE_DAY) }
     val coin = state.coin
     
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { 
-                    Text(
-                        coin?.name ?: "Loading...",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    ) 
+                    Column {
+                        Text(
+                            text = coin?.name ?: "Loading...",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                        )
+                        coin?.marketCapRank?.let { rank ->
+                            Text(
+                                text = "#$rank",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
@@ -69,6 +88,17 @@ fun CoinDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = { /* TODO: Add to watchlist */ },
+                        enabled = coin != null
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Add to watchlist",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
                     if (state.isRefreshing) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
@@ -77,7 +107,7 @@ fun CoinDetailScreen(
                     } else {
                         IconButton(
                             onClick = { onEvent(CoinDetailUiEvent.Refresh) },
-                            enabled = !state.isLoading
+                            enabled = !state.isLoading && coin != null
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
@@ -116,55 +146,73 @@ fun CoinDetailScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp)
                 ) {
-                    // Header Section
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                    // Price Section
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        // Coin icon and symbol
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            AsyncImage(
-                                model = coin.imageUrl,
-                                contentDescription = "${coin.name} logo",
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.LightGray)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = coin.symbol.uppercase(),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
+                        Text(
+                            text = coin.formattedPrice,
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                         
-                        // Price and change
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.weight(1f)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = coin.formattedPrice,
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = coin.formattedPriceChange,
+                                text = "${if (coin.isPositive24h) "+" else ""}${String.format("Locale.NG", "%.2f", coin.priceChangePercentage24h)}% (24H)",
                                 color = if (coin.isPositive24h) Color.Green else Color.Red,
-                                style = MaterialTheme.typography.titleMedium
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(end = 8.dp)
                             )
                         }
                     }
                     
+                    // Price Chart
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Generate some sample price data for the chart
+                    val priceHistory = remember(coin) {
+                        val basePrice = coin.currentPrice
+                        List(30) { index ->
+                            basePrice * (1 + (Math.random() * 0.1 - 0.05).toFloat())
+                        }
+                    }
+                    
+                    PriceChart(
+                        prices = priceHistory,
+                        lineColor = if (coin.isPositive24h) Color.Green else Color.Red,
+                        gradientColors = if (coin.isPositive24h) {
+                            listOf(
+                                Color.Green.copy(alpha = 0.3f),
+                                Color.Green.copy(alpha = 0.05f)
+                            )
+                        } else {
+                            listOf(
+                                Color.Red.copy(alpha = 0.3f),
+                                Color.Red.copy(alpha = 0.05f)
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                    )
+                    
+                    // Time Range Selector
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TimeRangeSelector(
+                        selectedRange = selectedTimeRange,
+                        onRangeSelected = { selectedTimeRange = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
                     Spacer(modifier = Modifier.height(24.dp))
                     
-                    // Market Stats
+                    // Stats Section
                     Text(
-                        "Market Stats",
+                        "Statistics",
                         style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     
@@ -173,21 +221,38 @@ fun CoinDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(MaterialTheme.shapes.medium)
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        StatItem("Market Cap", coin.formattedMarketCap)
-                        StatItem("24h Trading Volume", coin.formattedVolume)
-                        StatItem("Circulating Supply", "${coin.formattedSupply} ${coin.symbol.uppercase()}")
-                        coin.supplyPercentage?.let { percentage ->
-                            StatItem("Supply Percentage", "${String.format("%.2f", percentage)}%")
+                        // First row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            StatItem("Market Cap", coin.formattedMarketCap, Modifier.weight(1f))
+                            Spacer(modifier = Modifier.width(16.dp))
+                            StatItem("Volume (24h)", coin.formattedVolume, Modifier.weight(1f))
                         }
-                        coin.high24h?.let { high ->
-                            StatItem("24h High", formatCurrency(high))
-                        }
-                        coin.low24h?.let { low ->
-                            StatItem("24h Low", formatCurrency(low))
+                        
+                        // Second row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            coin.maxSupply?.let { maxSupply ->
+                                StatItem("Max Supply", "${formatLargeNumber(maxSupply.toLong())} ${coin.symbol.uppercase()}", 
+                                    Modifier.weight(1f))
+                            } ?: StatItem("Circulating Supply", "${coin.formattedSupply} ${coin.symbol.uppercase()}", 
+                                Modifier.weight(1f))
+                            
+                            Spacer(modifier = Modifier.width(16.dp))
+                            
+                            coin.high24h?.let { high ->
+                                StatItem("24h High", formatCurrency(high), Modifier.weight(1f))
+                            } ?: coin.low24h?.let { low ->
+                                StatItem("24h Low", formatCurrency(low), Modifier.weight(1f))
+                            } ?: Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                     
@@ -222,65 +287,86 @@ private fun StatItem(
     value: String,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
+    Column(modifier = modifier) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium
         )
     }
 }
 
-private fun formatCurrency(amount: Double): String {
-    return NumberFormat.getCurrencyInstance(Locale.US).format(amount)
+@Composable
+private fun TimeRangeSelector(
+    selectedRange: TimeRange,
+    onRangeSelected: (TimeRange) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val timeRanges = TimeRange.values()
+    
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        timeRanges.forEach { range ->
+            val isSelected = range == selectedRange
+            val buttonColors = ButtonDefaults.buttonColors(
+                containerColor = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+                contentColor = if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+            
+            Button(
+                onClick = { onRangeSelected(range) },
+                colors = buttonColors,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(32.dp),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text(
+                    text = range.displayName,
+                    style = MaterialTheme.typography.labelMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
 }
 
-@Preview(showBackground = true)
-@Composable
-private fun CoinDetailPreview() {
-    MaterialTheme {
-        CoinDetailScreen(
-            state = CoinDetailUiState(
-                coinId = "bitcoin",
-                coin = Coin(
-                    id = "bitcoin",
-                    name = "Bitcoin",
-                    symbol = "btc",
-                    imageUrl = "https://assets.coingecko.com/coins/images/1/large/bitcoin.png",
-                    currentPrice = 50000.0,
-                    marketCap = 950000000000,
-                    marketCapRank = 1,
-                    priceChange24h = 1000.0,
-                    priceChangePercentage24h = 2.5,
-                    priceChangePercentage1h = 0.5,
-                    priceChangePercentage7d = 5.0,
-                    priceChangePercentage30d = 15.0,
-                    sparklineData = null,
-                    high24h = 51000.0,
-                    low24h = 49000.0,
-                    totalVolume = 30000000000.0,
-                    circulatingSupply = 18900000.0,
-                    totalSupply = 21000000.0,
-                    maxSupply = 21000000.0,
-                    ath = 69000.0,
-                    athDate = "2021-11-10T14:24:11.849Z",
-                    atl = 67.81,
-                    atlDate = "2013-07-06T00:00:00.000Z"
-                ),
-                isLoading = false,
-                isRefreshing = false,
-                error = null
-            ),
-            onEvent = {},
-            onBackClick = {}
-        )
+enum class TimeRange(val displayName: String) {
+    ONE_HOUR("1H"),
+    ONE_DAY("1D"),
+    ONE_WEEK("1W"),
+    ONE_MONTH("1M"),
+    ONE_YEAR("1Y"),
+    ALL("ALL")
+}
+
+private fun formatLargeNumber(number: Long): String {
+    return when {
+        number >= 1_000_000_000_000 -> "${String.format("%.2f", number / 1_000_000_000_000.0)}T"
+        number >= 1_000_000_000 -> "${String.format("%.2f", number / 1_000_000_000.0)}B"
+        number >= 1_000_000 -> "${String.format("%.2f", number / 1_000_000.0)}M"
+        number >= 1_000 -> "${String.format("%.1f", number / 1_000.0)}K"
+        else -> number.toString()
     }
+}
+
+private fun formatCurrency(amount: Double): String {
+    return NumberFormat.getCurrencyInstance(Locale.US).format(amount)
 }
