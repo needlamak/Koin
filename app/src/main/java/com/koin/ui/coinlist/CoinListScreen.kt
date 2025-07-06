@@ -1,6 +1,7 @@
 package com.koin.ui.coinlist
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,19 +16,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -40,10 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.koin.domain.coin.Coin
@@ -57,7 +59,12 @@ fun CoinListScreen(
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    val focusManager = LocalFocusManager.current
+    var isSearchActive by remember { mutableStateOf(false) }
+    
+    // Sample search suggestions
+    val searchSuggestions = remember {
+        listOf("Bitcoin", "Ethereum", "Solana", "Cardano", "Polkadot")
+    }
     
     LaunchedEffect(Unit) {
         searchQuery = state.searchQuery
@@ -66,21 +73,21 @@ fun CoinListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Crypto Tracker") },
+                title = { Text("Koin") },
                 actions = {
-                    IconButton(
-                        onClick = { onEvent(CoinListUiEvent.Refresh) },
-                        enabled = !state.isRefreshing
-                    ) {
-                        if (state.isRefreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
+                    // Filter chip
+                    FilterChip(
+                        selected = false,
+                        onClick = { /* TODO: Implement filter */ },
+                        label = { Text("Filters") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(FilterChipDefaults.IconSize)
                             )
-                        } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                         }
-                    }
+                    )
                 }
             )
         }
@@ -90,24 +97,64 @@ fun CoinListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = {
+            // Modern Search Bar
+            DockedSearchBar(
+                query = searchQuery,
+                onQueryChange = { 
                     searchQuery = it
                     onEvent(CoinListUiEvent.OnSearchQueryChange(it))
                 },
+                onSearch = { isSearchActive = false },
+                active = isSearchActive,
+                onActiveChange = { isSearchActive = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                colors = SearchBarDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                ),
                 placeholder = { Text("Search coins...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(
-                    onSearch = { focusManager.clearFocus() }
-                )
-            )
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(
+                                Icons.Default.Clear,
+                                contentDescription = "Clear search",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            ) {
+                // Search suggestions
+                searchSuggestions.forEach { suggestion ->
+                    ListItem(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                searchQuery = suggestion
+                                onEvent(CoinListUiEvent.OnSearchQueryChange(suggestion))
+                                isSearchActive = false
+                            },
+                        headlineContent = { Text(suggestion) },
+                        leadingContent = {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    )
+                }
+            }
+
 
             // Loading state
             if (state.isLoading) {
