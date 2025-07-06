@@ -1,5 +1,8 @@
 package com.koin.ui.profile
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,28 +13,41 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -63,6 +80,7 @@ fun ProfileScreen(
         }
     }
 
+    // Show loading state if needed
     if (state.isLoading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -76,9 +94,16 @@ fun ProfileScreen(
             onSave = { name, email, bio ->
                 viewModel.onEvent(ProfileUiEvent.Save(name, email, bio, user.avatarUri))
             },
-            viewModel
+            viewModel = viewModel
         )
     }
+}
+
+// Define filter options
+sealed class FilterOption(val title: String) {
+    object All : FilterOption("All")
+    object Favorites : FilterOption("Favorites")
+    object Recent : FilterOption("Recent")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -91,60 +116,224 @@ private fun ProfileContentWithMenu(
     val navController = rememberNavController()
     val pagerState = rememberPagerState(pageCount = { 3 })
     val tabs = listOf("Portfolio", "Watchlist", "Edit Profile")
+    
+    // State for search and filter
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearchActive by remember { mutableStateOf(false) }
+    var selectedFilter by remember { mutableStateOf<FilterOption>(FilterOption.All) }
+    var showFilterMenu by remember { mutableStateOf(false) }
+    
+    // Animation for filter icon rotation
+    val filterIconRotation by animateFloatAsState(
+        targetValue = if (showFilterMenu) 180f else 0f,
+        label = "filterRotation"
+    )
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+            Column {
+                TopAppBar(
+                    navigationIcon = {
+                        if (!isSearchActive) {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back"
+                                )
+                            }
+                        }
+                    },
+                    title = {
+                        if (!isSearchActive) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (user.avatarUri != null) {
+                                    AsyncImage(
+                                        model = user.avatarUri,
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(RoundedCornerShape(16.dp)),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.AccountCircle,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Profile")
+                            }
+                        }
+                    },
+                    actions = {
+                        if (!isSearchActive) {
+                            var showMenu by remember { mutableStateOf(false) }
+                            
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Search Icon
+                                IconButton(
+                                    onClick = { isSearchActive = true }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = "Search",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                
+                                // More options menu
+                                IconButton(onClick = { showMenu = true }) {
+                                    Icon(
+                                        Icons.Default.MoreVert, 
+                                        contentDescription = "More"
+                                    )
+                                }
+                                
+                                DropdownMenu(
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Settings") },
+                                        onClick = { /* TODO: Navigate to settings */ }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Logout") },
+                                        onClick = { viewModel.logout() }
+                                    )
+                                }
+                            }
+                        }
                     }
-                },
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (user.avatarUri != null) {
-                            AsyncImage(
-                                model = user.avatarUri,
-                                modifier = Modifier.size(32.dp),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop
+                )
+                
+                // Search Bar (shown when search is active)
+                if (isSearchActive) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Modern SearchBar
+                        DockedSearchBar(
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            onSearch = { isSearchActive = false },
+                            active = isSearchActive,
+                            onActiveChange = { isActive -> isSearchActive = isActive },
+                            placeholder = { Text("Search in profile...") },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = "Search",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = { searchQuery = "" }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Clear,
+                                            contentDescription = "Clear search",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            },
+                            colors = SearchBarDefaults.colors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                dividerColor = MaterialTheme.colorScheme.outline
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                        ) {
+                            // Search suggestions would go here
+                            LazyColumn {
+                                items (listOf("Portfolio", "Watchlist", "Settings")) { suggestion ->
+                                    ListItem(
+                                        headlineContent = { Text(suggestion) },
+                                        modifier = Modifier
+                                            .clickable {
+                                                searchQuery = suggestion
+                                                isSearchActive = false
+                                            }
+                                            .padding(8.dp)
+                                    )
+                                    Divider()
+                                }
+                            }
+                        }
+                        
+                        // Cancel button
+                        TextButton(
+                            onClick = { 
+                                isSearchActive = false
+                                searchQuery = ""
+                            },
+                            modifier = Modifier.padding(start = 8.dp)
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                    
+                    // Filter chips
+                    if (isSearchActive) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilterChip(
+                                selected = selectedFilter is FilterOption.All,
+                                onClick = { selectedFilter = FilterOption.All },
+                                label = { Text(FilterOption.All.title) },
+                                leadingIcon = if (selectedFilter is FilterOption.All) {
+                                    { Icon(Icons.Default.Check, contentDescription = null) }
+                                } else null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             )
-                        } else {
-                            Icon(
-                                Icons.Default.AccountCircle,
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp)
+                            
+                            FilterChip(
+                                selected = selectedFilter is FilterOption.Favorites,
+                                onClick = { selectedFilter = FilterOption.Favorites },
+                                label = { Text(FilterOption.Favorites.title) },
+                                leadingIcon = if (selectedFilter is FilterOption.Favorites) {
+                                    { Icon(Icons.Default.Check, contentDescription = null) }
+                                } else null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            )
+                            
+                            FilterChip(
+                                selected = selectedFilter is FilterOption.Recent,
+                                onClick = { selectedFilter = FilterOption.Recent },
+                                label = { Text(FilterOption.Recent.title) },
+                                leadingIcon = if (selectedFilter is FilterOption.Recent) {
+                                    { Icon(Icons.Default.Check, contentDescription = null) }
+                                } else null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Profile")
-                    }
-                },
-                actions = {
-                    var showMenu by remember { mutableStateOf(false) }
-
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More")
-                    }
-
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Settings") },
-                            onClick = { /* TODO: Navigate to settings */ }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Logout") },
-                            onClick = { viewModel.logout() }
-                        )
                     }
                 }
-            )
+            }
         }
     ) { paddingValues ->
         Column(

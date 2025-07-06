@@ -2,6 +2,8 @@ package com.koin.ui.coindetail
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.koin.data.coin.TimeRange
+import com.koin.data.coin.dto.PriceDataPoint
 import com.koin.domain.coin.Coin
 import com.koin.domain.coin.CoinRepository
 import com.koin.ui.base.BaseViewModel
@@ -12,6 +14,11 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+sealed class CoinDetailUiEvent {
+    object Refresh : CoinDetailUiEvent()
+    data class TimeRangeSelected(val timeRange: TimeRange) : CoinDetailUiEvent()
+}
 
 @HiltViewModel
 class CoinDetailViewModel @Inject constructor(
@@ -26,32 +33,41 @@ class CoinDetailViewModel @Inject constructor(
 
     init {
         loadCoin()
+        loadHistoricalData()
     }
 
     override fun handleEvent(event: CoinDetailUiEvent) {
         when (event) {
-            is CoinDetailUiEvent.Refresh -> loadCoin()
+            is CoinDetailUiEvent.Refresh -> {
+                loadCoin()
+                loadHistoricalData()
+            }
+            is CoinDetailUiEvent.TimeRangeSelected -> {
+                _uiState.update { it.copy(selectedTimeRange = event.timeRange) }
+                loadHistoricalData()
+            }
         }
     }
 
     private fun loadCoin() {
-        _uiState.update { it.copy(isLoading = true) }
-        
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            
             repository.getCoinById(coinId)
                 .catch { e ->
-                    _uiState.update { 
-                        it.copy(
+                    _uiState.update { state ->
+                        state.copy(
                             error = e.message,
                             isLoading = false,
                             isRefreshing = false
-                        ) 
+                        )
                     }
+                    //Timber.e(e, "Error loading coin details")
                 }
                 .collectLatest { result ->
                     result.onSuccess { coin ->
-                        _uiState.update {
-                            it.copy(
+                        _uiState.update { state ->
+                            state.copy(
                                 coin = coin,
                                 isLoading = false,
                                 isRefreshing = false,
@@ -59,15 +75,47 @@ class CoinDetailViewModel @Inject constructor(
                             )
                         }
                     }.onFailure { e ->
-                        _uiState.update { 
-                            it.copy(
+                        _uiState.update { state ->
+                            state.copy(
                                 error = e.message,
                                 isLoading = false,
                                 isRefreshing = false
-                            ) 
+                            )
                         }
                     }
                 }
+        }
+    }
+
+    private fun loadHistoricalData() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingHistoricalData = true) }
+            
+            try {
+                val timeRange = _uiState.value.selectedTimeRange
+                val historicalData = repository.getCoinMarketChart(
+                    coinId = coinId,
+                    timeRange = timeRange,
+                    vsCurrency = "usd"
+                )
+                
+                _uiState.update { state ->
+                    state.copy(
+                        historicalData = historicalData,
+                        isLoadingHistoricalData = false,
+                        error = null
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { state ->
+                    state.copy(
+                        error = e.message,
+                        isLoadingHistoricalData = false,
+                        historicalData = emptyList() // Clear any previous data on error
+                    )
+                }
+//                Timber.e(e, "Error loading historical data")
+            }
         }
     }
 }
@@ -75,11 +123,10 @@ class CoinDetailViewModel @Inject constructor(
 data class CoinDetailUiState(
     val coinId: String,
     val coin: Coin? = null,
-    val isLoading: Boolean = true,
+    val historicalData: List<PriceDataPoint> = emptyList(),
+    val isLoading: Boolean = false,
+    val isLoadingHistoricalData: Boolean = false,
     val isRefreshing: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val selectedTimeRange: TimeRange = TimeRange.DAY
 )
-
-sealed class CoinDetailUiEvent {
-    object Refresh : CoinDetailUiEvent()
-}

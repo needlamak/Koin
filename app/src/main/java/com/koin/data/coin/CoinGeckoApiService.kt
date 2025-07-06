@@ -1,6 +1,8 @@
 package com.koin.data.coin
 
+import com.koin.data.coin.dto.CoinMarketChartResponse
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface CoinGeckoApiService {
@@ -23,4 +25,12 @@ interface CoinGeckoApiService {
         @Query("include_24hr_change") include24hrChange: Boolean = true,
         @Query("include_last_updated_at") includeLastUpdatedAt: Boolean = true
     ): Map<String, Map<String, Any>>
+    
+    @GET("coins/{id}/market_chart/range")
+    suspend fun getCoinMarketChartRange(
+        @Path("id") id: String,
+        @Query("vs_currency") vsCurrency: String = "usd",
+        @Query("from") from: Long,
+        @Query("to") to: Long
+    ): CoinMarketChartResponse
 }

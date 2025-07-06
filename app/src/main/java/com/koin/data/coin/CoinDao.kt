@@ -22,4 +22,17 @@ interface CoinDao {
 
     @Query("SELECT COUNT(*) FROM coins")
     suspend fun getCoinCount(): Int
-} 
+
+    // Chart data methods
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCoinChart(chart: CoinChartEntity)
+
+    @Query("SELECT * FROM coin_chart WHERE coinId = :coinId AND timeRange = :timeRange ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getCoinChart(coinId: String, timeRange: String): CoinChartEntity?
+
+    @Query("DELETE FROM coin_chart WHERE coinId = :coinId AND timeRange = :timeRange")
+    suspend fun deleteCoinChart(coinId: String, timeRange: String)
+
+    @Query("DELETE FROM coin_chart WHERE timestamp < :cutoff")
+    suspend fun pruneOldCharts(cutoff: Long)
+}

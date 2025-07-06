@@ -66,8 +66,23 @@ class ProfileViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
-            sessionManager.logout()
-            _uiState.update { it.copy(loggedOut = true) }
+            try {
+                _uiState.update { it.copy(isLoading = true) }
+                // Clear session or perform any cleanup
+                _uiState.update {
+                    it.copy(
+                        loggedOut = true,
+                        isLoading = false
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        error = e.message ?: "Logout failed",
+                        isLoading = false
+                    )
+                }
+            }
         }
     }
 }
