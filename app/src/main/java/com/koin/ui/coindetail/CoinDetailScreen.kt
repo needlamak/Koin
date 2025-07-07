@@ -1,12 +1,10 @@
 package com.koin.ui.coindetail
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,14 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,24 +31,19 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import com.koin.data.coin.TimeRange
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -62,28 +55,29 @@ fun CoinDetailScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var selectedTimeRange by remember { mutableStateOf(TimeRange.ONE_DAY) }
     val coin = state.coin
-
-    // Sync selected time range with state
-    val selectedTimeRange = state.selectedTimeRange
-
-    // Handle time range changes
-    fun onTimeRangeSelected(timeRange: TimeRange) {
-        onEvent(CoinDetailUiEvent.TimeRangeSelected(timeRange))
-    }
-
-    // Extract prices from historical data
-    val priceHistory = state.historicalData.map { it.price }
-
+    
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        coin?.name ?: "Loading...",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                title = { 
+                    Column {
+                        Text(
+                            text = coin?.name ?: "Loading...",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                        )
+                        coin?.marketCapRank?.let { rank ->
+                            Text(
+                                text = "#$rank",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
@@ -94,19 +88,29 @@ fun CoinDetailScreen(
                     }
                 },
                 actions = {
-                    // Refresh button
                     IconButton(
-                        onClick = { onEvent(CoinDetailUiEvent.Refresh) },
-                        enabled = !state.isRefreshing
+                        onClick = { /* TODO: Add to watchlist */ },
+                        enabled = coin != null
                     ) {
-                        if (state.isRefreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Add to watchlist",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    
+                    if (state.isRefreshing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        IconButton(
+                            onClick = { onEvent(CoinDetailUiEvent.Refresh) },
+                            enabled = !state.isLoading && coin != null
+                        ) {
                             Icon(
-                                Icons.Default.Refresh,
+                                imageVector = Icons.Default.Refresh,
                                 contentDescription = "Refresh"
                             )
                         }
@@ -124,7 +128,7 @@ fun CoinDetailScreen(
                     CircularProgressIndicator()
                 }
             }
-
+            
             coin == null -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -133,7 +137,7 @@ fun CoinDetailScreen(
                     Text("Coin not found")
                 }
             }
-
+            
             else -> {
                 Column(
                     modifier = modifier
@@ -142,172 +146,125 @@ fun CoinDetailScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp)
                 ) {
-                    // Header Section
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                    // Price Section
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        // Coin icon and symbol
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            AsyncImage(
-                                model = coin.imageUrl,
-                                contentDescription = "${coin.name} logo",
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.LightGray)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = coin.symbol.uppercase(),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-
-                        // Price and change
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.weight(1f)
+                        Text(
+                            text = coin.formattedPrice,
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = coin.formattedPrice,
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = coin.formattedPriceChange,
+                                text = "${if (coin.isPositive24h) "+" else ""}${String.format("Locale.US", "%.2f", coin.priceChangePercentage24h)}% (24H)",
                                 color = if (coin.isPositive24h) Color.Green else Color.Red,
-                                style = MaterialTheme.typography.titleMedium
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(end = 8.dp)
                             )
                         }
                     }
+                    
                     // Price Chart
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(250.dp)
-                            //.padding(8.dp)
-                    ) {
-                        when {
-                            state.isLoadingHistoricalData -> {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator()
-                                }
-                            }
-
-                            priceHistory.isNotEmpty() -> {
-                                val isPositive = priceHistory.last() > priceHistory.first()
-                                PriceChart(
-                                    prices = priceHistory,
-                                    modifier = Modifier.fillMaxSize(),
-                                    lineColor = if (isPositive) Color.Green else Color.Red,
-                                    gradientColors = listOf(
-                                        if (isPositive)
-                                            Color.Green.copy(alpha = 0.3f)
-                                        else
-                                            Color.Red.copy(alpha = 0.3f),
-                                        Color.Transparent
-                                    )
-                                )
-                            }
-
-                            !coin.sparklineData.isNullOrEmpty() -> {
-                                PriceChart(
-                                    prices = coin.sparklineData,
-                                    modifier = Modifier.fillMaxSize(),
-                                    lineColor = if (coin.isPositive24h) Color.Green else Color.Red,
-                                    gradientColors = listOf(
-                                        if (coin.isPositive24h)
-                                            Color.Green.copy(alpha = 0.2f)
-                                        else
-                                            Color.Red.copy(alpha = 0.2f),
-                                        Color.Transparent
-                                    )
-                                )
-                            }
-
-                            else -> {
-                                Text(
-                                    "No price data available",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.align(Alignment.Center)
-                                )
-                            }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Generate some sample price data for the chart
+                    val priceHistory = remember(coin) {
+                        val basePrice = coin.currentPrice
+                        List(30) { index ->
+                            basePrice * (1 + (Math.random() * 0.1 - 0.05).toFloat())
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
+                    
+                    PriceChart(
+                        prices = priceHistory,
+                        lineColor = if (coin.isPositive24h) Color.Green else Color.Red,
+                        gradientColors = if (coin.isPositive24h) {
+                            listOf(
+                                Color.Green.copy(alpha = 0.3f),
+                                Color.Green.copy(alpha = 0.05f)
+                            )
+                        } else {
+                            listOf(
+                                Color.Red.copy(alpha = 0.3f),
+                                Color.Red.copy(alpha = 0.05f)
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                    )
+                    
                     // Time Range Selector
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        item {
-
-                            TimeRange.entries.forEach { timeRange ->
-                                TimeRangeButton(
-                                    text = timeRange.name,
-                                    isSelected = selectedTimeRange == timeRange,
-                                    onClick = { onTimeRangeSelected(timeRange) }
-                                )
-                            }
-                        }
-                    }
-
-
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TimeRangeSelector(
+                        selectedRange = selectedTimeRange,
+                        onRangeSelected = { selectedTimeRange = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
                     Spacer(modifier = Modifier.height(24.dp))
-
-                    // Market Stats
+                    
+                    // Stats Section
                     Text(
-                        "Market Stats",
+                        "Statistics",
                         style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-
+                    
                     // Stats Grid
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(MaterialTheme.shapes.medium)
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        StatItem("Market Cap", coin.formattedMarketCap)
-                        StatItem("24h Trading Volume", coin.formattedVolume)
-                        StatItem(
-                            "Circulating Supply",
-                            "${coin.formattedSupply} ${coin.symbol.uppercase()}"
-                        )
-                        coin.supplyPercentage?.let { percentage ->
-                            StatItem("Supply Percentage", "${String.format("%.2f", percentage)}%")
+                        // First row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            StatItem("Market Cap", coin.formattedMarketCap, Modifier.weight(1f))
+                            Spacer(modifier = Modifier.width(16.dp))
+                            StatItem("Volume (24h)", coin.formattedVolume, Modifier.weight(1f))
                         }
-                        coin.high24h?.let { high ->
-                            StatItem("24h High", formatCurrency(high))
-                        }
-                        coin.low24h?.let { low ->
-                            StatItem("24h Low", formatCurrency(low))
+                        
+                        // Second row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            coin.maxSupply?.let { maxSupply ->
+                                StatItem("Max Supply", "${formatLargeNumber(maxSupply.toLong())} ${coin.symbol.uppercase()}", 
+                                    Modifier.weight(1f))
+                            } ?: StatItem("Circulating Supply", "${coin.formattedSupply} ${coin.symbol.uppercase()}", 
+                                Modifier.weight(1f))
+                            
+                            Spacer(modifier = Modifier.width(16.dp))
+                            
+                            coin.high24h?.let { high ->
+                                StatItem("24h High", formatCurrency(high), Modifier.weight(1f))
+                            } ?: coin.low24h?.let { low ->
+                                StatItem("24h Low", formatCurrency(low), Modifier.weight(1f))
+                            } ?: Spacer(modifier = Modifier.weight(1f))
                         }
                     }
-
+                    
                     Spacer(modifier = Modifier.height(24.dp))
-
+                    
                     // About Section
                     Text(
                         "About ${coin.name}",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-
+                    
                     // Additional details can be added here
                     // For now, just show some placeholder text
                     Text(
@@ -316,7 +273,7 @@ fun CoinDetailScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         lineHeight = 20.sp
                     )
-
+                    
                     Spacer(modifier = Modifier.height(32.dp))
                 }
             }
@@ -330,178 +287,86 @@ private fun StatItem(
     value: String,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
+    Column(modifier = modifier) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium
         )
     }
 }
 
-private fun formatCurrency(amount: Double): String {
-    return NumberFormat.getCurrencyInstance(Locale.US).format(amount)
-}
-
 @Composable
-private fun TimeRangeButton(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
+private fun TimeRangeSelector(
+    selectedRange: TimeRange,
+    onRangeSelected: (TimeRange) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Button(
-        onClick = onClick,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            },
-            contentColor = if (isSelected) {
-                MaterialTheme.colorScheme.onPrimary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            }
-        ),
-        shape = RoundedCornerShape(16.dp),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 2.dp
-        ),
-        modifier = modifier
-            .height(32.dp)
-            .padding(horizontal = 2.dp)
+    val timeRanges = TimeRange.values()
+    
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1
-        )
+        timeRanges.forEach { range ->
+            val isSelected = range == selectedRange
+            val buttonColors = ButtonDefaults.buttonColors(
+                containerColor = if (isSelected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+                contentColor = if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+            
+            Button(
+                onClick = { onRangeSelected(range) },
+                colors = buttonColors,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(32.dp),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text(
+                    text = range.displayName,
+                    style = MaterialTheme.typography.labelMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
     }
 }
 
-//
-@Composable
-private fun PriceChart(
-    prices: List<Double>,
-    modifier: Modifier = Modifier,
-    lineColor: Color = Color.Blue,
-    gradientColors: List<Color> = listOf(
-        Color.Blue.copy(alpha = 0.3f),
-        Color.Blue.copy(alpha = 0.1f)
-    )
-) {
-    val maxPrice = remember(prices) { prices.maxOrNull() ?: 0.0 }
-    val minPrice = remember(prices) { prices.minOrNull() ?: 0.0 }
-    val priceRange = remember(prices) { maxPrice - minPrice }
+enum class TimeRange(val displayName: String) {
+    ONE_HOUR("1H"),
+    ONE_DAY("1D"),
+    ONE_WEEK("1W"),
+    ONE_MONTH("1M"),
+    ONE_YEAR("1Y"),
+    ALL("ALL")
+}
 
-    val selectedIndex = remember { mutableStateOf<Int?>(null) }
-
-    // Touch responsiveness: update selectedIndex on tap or drag
-    val pointerModifier = Modifier.pointerInput(prices) {
-        detectTapGestures { offset ->
-            val width = size.width
-            val step = width / (prices.size - 1).coerceAtLeast(1)
-            val index = (offset.x / step).toInt().coerceIn(0, prices.lastIndex)
-            selectedIndex.value = index
-        }
-        detectDragGestures { change, _ ->
-            val width = size.width
-            val step = width / (prices.size - 1).coerceAtLeast(1)
-            val index = (change.position.x / step).toInt().coerceIn(0, prices.lastIndex)
-            selectedIndex.value = index
-        }
+private fun formatLargeNumber(number: Long): String {
+    return when {
+        number >= 1_000_000_000_000 -> "${String.format("%.2f", number / 1_000_000_000_000.0)}T"
+        number >= 1_000_000_000 -> "${String.format("%.2f", number / 1_000_000_000.0)}B"
+        number >= 1_000_000 -> "${String.format("%.2f", number / 1_000_000.0)}M"
+        number >= 1_000 -> "${String.format("%.1f", number / 1_000.0)}K"
+        else -> number.toString()
     }
+}
 
-    Canvas(
-        modifier = modifier
-            .then(pointerModifier)
-            .padding(vertical = 8.dp)
-            .clip(MaterialTheme.shapes.medium)
-    ) {
-        if (prices.isEmpty() || priceRange == 0.0) return@Canvas
-
-        val width = size.width
-        val height = size.height
-        val step = width / (prices.size - 1).coerceAtLeast(1)
-
-        // Draw gradient background
-        drawRect(
-            brush = Brush.verticalGradient(
-                colors = gradientColors,
-                startY = 0f,
-                endY = height
-            ),
-            size = size
-        )
-
-        // Draw price line
-        val path = Path().apply {
-            prices.forEachIndexed { index, price ->
-                val x = index * step
-                val y = height - ((price - minPrice) / priceRange * height).toFloat()
-
-                if (index == 0) {
-                    moveTo(x, y)
-                } else {
-                    lineTo(x, y)
-                }
-            }
-        }
-
-        drawPath(
-            path = path,
-            color = lineColor,
-            style = Stroke(width = 2.dp.toPx())
-        )
-
-        // Draw selected point
-        selectedIndex.value?.let { index ->
-            if (index in prices.indices) {
-                val x = index * step
-                val y = height - ((prices[index] - minPrice) / priceRange * height).toFloat()
-
-                drawCircle(
-                    color = lineColor,
-                    radius = 8.dp.toPx(),
-                    center = Offset(x, y)
-                )
-
-                // Draw price label
-                drawContext.canvas.nativeCanvas.apply {
-                    val priceText = "$${String.format("%.4f", prices[index])}"
-                    val textPaint = android.graphics.Paint().apply {
-                        color = android.graphics.Color.WHITE
-                        textSize = 24f
-                        textAlign = android.graphics.Paint.Align.CENTER
-                        setShadowLayer(4f, 0f, 0f, android.graphics.Color.BLACK)
-                    }
-
-                    val textBounds = android.graphics.Rect()
-                    textPaint.getTextBounds(priceText, 0, priceText.length, textBounds)
-
-                    val textX = x.coerceIn(0f, width - textBounds.width() - 16.dp.toPx())
-                    val textY = (y - 12.dp.toPx()).coerceAtLeast(
-                        textBounds.height().toFloat() + 8.dp.toPx()
-                    )
-
-                    drawText(
-                        priceText,
-                        textX,
-                        textY,
-                        textPaint
-                    )
-                }
-            }
-        }
-    }
+private fun formatCurrency(amount: Double): String {
+    return NumberFormat.getCurrencyInstance(Locale.US).format(amount)
 }
