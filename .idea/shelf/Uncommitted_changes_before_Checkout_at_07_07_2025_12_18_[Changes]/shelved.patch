@@ -1,0 +1,314 @@
+Index: app/src/main/java/com/koin/data/coin/CoinDao.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.koin.data.coin\r\n\r\nimport androidx.room.*\r\nimport kotlinx.coroutines.flow.Flow\r\n\r\n@Dao\r\ninterface CoinDao {\r\n    @Query(\"SELECT * FROM coins ORDER BY marketCapRank ASC\")\r\n    fun getAllCoins(): Flow<List<CoinEntity>>\r\n\r\n    @Query(\"SELECT * FROM coins WHERE id = :coinId\")\r\n    fun getCoinById(coinId: String): Flow<CoinEntity?>\r\n\r\n    @Insert(onConflict = OnConflictStrategy.REPLACE)\r\n    suspend fun insertAll(coins: List<CoinEntity>)\r\n\r\n    @Insert(onConflict = OnConflictStrategy.REPLACE)\r\n    suspend fun insertCoin(coin: CoinEntity)\r\n\r\n    @Query(\"DELETE FROM coins\")\r\n    suspend fun deleteAllCoins()\r\n\r\n    @Query(\"SELECT COUNT(*) FROM coins\")\r\n    suspend fun getCoinCount(): Int\r\n\r\n    // Chart data methods\r\n    @Insert(onConflict = OnConflictStrategy.REPLACE)\r\n    suspend fun insertCoinChart(chart: CoinChartEntity)\r\n\r\n    @Query(\"SELECT * FROM coin_chart WHERE coinId = :coinId AND timeRange = :timeRange ORDER BY timestamp DESC LIMIT 1\")\r\n    suspend fun getCoinChart(coinId: String, timeRange: String): CoinChartEntity?\r\n\r\n    @Query(\"DELETE FROM coin_chart WHERE coinId = :coinId AND timeRange = :timeRange\")\r\n    suspend fun deleteCoinChart(coinId: String, timeRange: String)\r\n\r\n    @Query(\"DELETE FROM coin_chart WHERE timestamp < :cutoff\")\r\n    suspend fun pruneOldCharts(cutoff: Long)\r\n}
+===================================================================
+diff --git a/app/src/main/java/com/koin/data/coin/CoinDao.kt b/app/src/main/java/com/koin/data/coin/CoinDao.kt
+--- a/app/src/main/java/com/koin/data/coin/CoinDao.kt	(revision a044f08ae152995761c1bdcbb7243de4eb8ed283)
++++ b/app/src/main/java/com/koin/data/coin/CoinDao.kt	(date 1751886939334)
+@@ -20,6 +20,9 @@
+     @Query("DELETE FROM coins")
+     suspend fun deleteAllCoins()
+ 
++    @Query("UPDATE coins SET currentPrice = :price, priceChangePercentage24h = :priceChangePercentage, lastUpdated = :lastUpdated WHERE id = :id")
++    suspend fun updateCoinPrice(id: String, price: Double, priceChangePercentage: Double, lastUpdated: String)
++
+     @Query("SELECT COUNT(*) FROM coins")
+     suspend fun getCoinCount(): Int
+ 
+Index: app/src/main/java/com/koin/data/coin/CoinRepositoryImpl.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.koin.data.coin\r\n\r\nimport android.Manifest\r\nimport android.util.Log\r\nimport androidx.annotation.RequiresPermission\r\nimport com.koin.data.coin.dto.PriceDataPoint\r\nimport com.koin.data.coin.dto.toPriceDataPoints\r\nimport com.koin.domain.coin.Coin\r\nimport com.koin.domain.coin.CoinRepository\r\nimport kotlinx.coroutines.CoroutineScope\r\nimport kotlinx.coroutines.Dispatchers\r\nimport kotlinx.coroutines.flow.Flow\r\nimport kotlinx.coroutines.flow.MutableStateFlow\r\nimport kotlinx.coroutines.flow.asStateFlow\r\nimport kotlinx.coroutines.flow.first\r\nimport kotlinx.coroutines.flow.map\r\nimport kotlinx.coroutines.launch\r\nimport java.util.Calendar\r\nimport javax.inject.Inject\r\nimport javax.inject.Singleton\r\n\r\n@Singleton\r\nclass CoinRepositoryImpl @Inject constructor(\r\n    private val apiService: CoinGeckoApiService,\r\n    private val coinDao: CoinDao,\r\n    private val networkUtil: NetworkUtil\r\n) : CoinRepository {\r\n\r\n    private val _coins = MutableStateFlow<Map<String, Coin>>(emptyMap())\r\n    val coins = _coins.asStateFlow()\r\n\r\n    private val _lastError = MutableStateFlow<String?>(null)\r\n    val lastError = _lastError.asStateFlow()\r\n\r\n    override fun getAllCoins(): Flow<Result<List<Coin>>> =\r\n        coins.map { Result.success(it.values.toList()) }\r\n    override fun getCoinById(id: String?): Flow<Result<Coin?>> =\r\n        coins.map { Result.success(it[id]) }\r\n\r\n    init {\r\n        CoroutineScope(Dispatchers.IO).launch @androidx.annotation.RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) {\r\n            loadFromCache()\r\n            if (networkUtil.isNetworkAvailable()) {\r\n                refreshFromNetwork()\r\n            }\r\n        }\r\n    }\r\n\r\n    private suspend fun loadFromCache() {\r\n        try {\r\n            val cachedCoins = coinDao.getAllCoins().first()\r\n            if (cachedCoins.isNotEmpty()) {\r\n                _coins.value = cachedCoins.map { it.toDomain() }.associateBy { it.id }\r\n            }\r\n        } catch (e: Exception) {\r\n            val errorMsg = \"Failed to load coins from cache: ${e.localizedMessage}\"\r\n            Log.e(\"CoinRepositoryImpl\", errorMsg, e)\r\n            _lastError.value = errorMsg\r\n        }\r\n    }\r\n\r\n    internal suspend fun refreshFromNetwork() {\r\n        try {\r\n            val freshData = apiService.getCoinsWithFullDetails()\r\n            val domainCoins = freshData.map { it.toDomain() }\r\n            _coins.value = domainCoins.associateBy { it.id }\r\n            coinDao.deleteAllCoins()\r\n            coinDao.insertAll(domainCoins.map { it.toEntity() })\r\n\r\n            // Prefetch chart data for all coins and all time ranges\r\n            val allTimeRanges = TimeRange.values()\r\n            domainCoins.forEach { coin ->\r\n                allTimeRanges.forEach { range ->\r\n                    CoroutineScope(Dispatchers.IO).launch {\r\n                        try {\r\n                            getCoinMarketChart(coin.id, range, \"usd\")\r\n                        } catch (_: Exception) { /* Ignore errors for prefetch */ }\r\n                    }\r\n                }\r\n            }\r\n        } catch (e: Exception) {\r\n            val errorMsg = \"Failed to refresh coins from network: ${e.localizedMessage}\"\r\n            Log.e(\"CoinRepositoryImpl\", errorMsg, e)\r\n            _lastError.value = errorMsg\r\n            if (_coins.value.isEmpty()) {\r\n                // Handle the case where there's no cached data\r\n                val noCacheMsg = \"No cached data available. Please check your internet connection.\"\r\n                Log.e(\"CoinRepositoryImpl\", noCacheMsg)\r\n                _lastError.value = noCacheMsg\r\n            }\r\n        }\r\n    }\r\n\r\n    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)\r\n    override suspend fun refreshCoins() {\r\n        if (networkUtil.isNetworkAvailable()) {\r\n            refreshFromNetwork()\r\n        }\r\n    }\r\n\r\n    // In-memory cache for chart data: (coinId, timeRange) -> List<PriceDataPoint>\r\n    private val chartCache = mutableMapOf<Pair<String, TimeRange>, List<PriceDataPoint>>()\r\n\r\n    override suspend fun getCoinMarketChart(\r\n        coinId: String,\r\n        timeRange: TimeRange,\r\n        vsCurrency: String\r\n    ): List<PriceDataPoint> {\r\n        val cacheKey = coinId to timeRange\r\n        chartCache[cacheKey]?.let { cached ->\r\n            return cached\r\n        }\r\n\r\n        // Persistent cache: check DB first\r\n        val cacheDurationMillis = 60 * 60 * 1000L // 1 hour (adjust to match your other coin data cache duration)\r\n        val now = System.currentTimeMillis()\r\n        val chartEntity = coinDao.getCoinChart(coinId, timeRange.name)\r\n        if (chartEntity != null && (now - chartEntity.timestamp) < cacheDurationMillis) {\r\n            // Parse JSON to List<Pair<Long, Double>>\r\n            val chartList = Converters().toChartList(chartEntity.priceDataJson) ?: emptyList()\r\n            val priceData = chartList.map { PriceDataPoint(it.first, it.second) }\r\n            chartCache[cacheKey] = priceData\r\n            return priceData\r\n        }\r\n\r\n        // Not cached or expired: fetch from network\r\n        return try {\r\n            val calendar = Calendar.getInstance()\r\n            val endTime = calendar.timeInMillis / 1000 // Current time in seconds\r\n            timeRange.days?.let { calendar.add(Calendar.DAY_OF_YEAR, -it) }\r\n            val startTime = calendar.timeInMillis / 1000 // Start time in seconds\r\n\r\n            val response = apiService.getCoinMarketChartRange(\r\n                id = coinId,\r\n                vsCurrency = vsCurrency,\r\n                from = startTime,\r\n                to = endTime\r\n            )\r\n            val data = response.toPriceDataPoints()\r\n            chartCache[cacheKey] = data\r\n            // Save to DB\r\n            val chartList = data.map { it.timestamp to it.price }\r\n            val entity = CoinChartEntity(\r\n                coinId = coinId,\r\n                timeRange = timeRange.name,\r\n                timestamp = now,\r\n                priceDataJson = Converters().fromChartList(chartList) ?: \"[]\"\r\n            )\r\n            coinDao.insertCoinChart(entity)\r\n            data\r\n        } catch (e: Exception) {\r\n            Log.e(\"CoinRepositoryImpl\", \"Error fetching market chart: ${e.localizedMessage}\", e)\r\n            emptyList()\r\n        }\r\n    }\r\n}
+===================================================================
+diff --git a/app/src/main/java/com/koin/data/coin/CoinRepositoryImpl.kt b/app/src/main/java/com/koin/data/coin/CoinRepositoryImpl.kt
+--- a/app/src/main/java/com/koin/data/coin/CoinRepositoryImpl.kt	(revision a044f08ae152995761c1bdcbb7243de4eb8ed283)
++++ b/app/src/main/java/com/koin/data/coin/CoinRepositoryImpl.kt	(date 1751886802485)
+@@ -4,7 +4,9 @@
+ import android.util.Log
+ import androidx.annotation.RequiresPermission
+ import com.koin.data.coin.dto.PriceDataPoint
++import com.koin.data.coin.dto.toEntity
+ import com.koin.data.coin.dto.toPriceDataPoints
++import com.koin.domain.model.TimeRange
+ import com.koin.domain.coin.Coin
+ import com.koin.domain.coin.CoinRepository
+ import kotlinx.coroutines.CoroutineScope
+@@ -68,7 +70,7 @@
+             coinDao.insertAll(domainCoins.map { it.toEntity() })
+ 
+             // Prefetch chart data for all coins and all time ranges
+-            val allTimeRanges = TimeRange.values()
++            val allTimeRanges = com.koin.domain.model.TimeRange.values()
+             domainCoins.forEach { coin ->
+                 allTimeRanges.forEach { range ->
+                     CoroutineScope(Dispatchers.IO).launch {
+@@ -103,7 +105,7 @@
+ 
+     override suspend fun getCoinMarketChart(
+         coinId: String,
+-        timeRange: TimeRange,
++        timeRange: com.koin.domain.model.TimeRange,
+         vsCurrency: String
+     ): List<PriceDataPoint> {
+         val cacheKey = coinId to timeRange
+Index: app/src/main/java/com/koin/ui/coindetail/CoinDetailScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.koin.ui.coindetail\r\n\r\nimport androidx.compose.foundation.background\r\nimport androidx.compose.foundation.layout.Arrangement\r\nimport androidx.compose.foundation.layout.Box\r\nimport androidx.compose.foundation.layout.Column\r\nimport androidx.compose.foundation.layout.PaddingValues\r\nimport androidx.compose.foundation.layout.Row\r\nimport androidx.compose.foundation.layout.Spacer\r\nimport androidx.compose.foundation.layout.fillMaxSize\r\nimport androidx.compose.foundation.layout.fillMaxWidth\r\nimport androidx.compose.foundation.layout.height\r\nimport androidx.compose.foundation.layout.padding\r\nimport androidx.compose.foundation.layout.size\r\nimport androidx.compose.foundation.layout.width\r\nimport androidx.compose.foundation.rememberScrollState\r\nimport androidx.compose.foundation.shape.RoundedCornerShape\r\nimport androidx.compose.foundation.verticalScroll\r\nimport androidx.compose.material.icons.Icons\r\nimport androidx.compose.material.icons.automirrored.filled.ArrowBack\r\nimport androidx.compose.material.icons.filled.Refresh\r\nimport androidx.compose.material.icons.filled.Star\r\nimport androidx.compose.material3.Button\r\nimport androidx.compose.material3.ButtonDefaults\r\nimport androidx.compose.material3.CircularProgressIndicator\r\nimport androidx.compose.material3.ExperimentalMaterial3Api\r\nimport androidx.compose.material3.Icon\r\nimport androidx.compose.material3.IconButton\r\nimport androidx.compose.material3.MaterialTheme\r\nimport androidx.compose.material3.Scaffold\r\nimport androidx.compose.material3.Text\r\nimport androidx.compose.material3.TopAppBar\r\nimport androidx.compose.runtime.Composable\r\nimport androidx.compose.runtime.getValue\r\nimport androidx.compose.runtime.mutableStateOf\r\nimport androidx.compose.runtime.remember\r\nimport androidx.compose.runtime.setValue\r\nimport androidx.compose.ui.Alignment\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.compose.ui.draw.clip\r\nimport androidx.compose.ui.graphics.Color\r\nimport androidx.compose.ui.text.font.FontWeight\r\nimport androidx.compose.ui.text.style.TextAlign\r\nimport androidx.compose.ui.text.style.TextOverflow\r\nimport androidx.compose.ui.unit.dp\r\nimport androidx.compose.ui.unit.sp\r\nimport java.text.NumberFormat\r\nimport java.util.Locale\r\n\r\n@OptIn(ExperimentalMaterial3Api::class)\r\n@Composable\r\nfun CoinDetailScreen(\r\n    state: CoinDetailUiState,\r\n    onEvent: (CoinDetailUiEvent) -> Unit,\r\n    onBackClick: () -> Unit,\r\n    modifier: Modifier = Modifier\r\n) {\r\n    var selectedTimeRange by remember { mutableStateOf(TimeRange.ONE_DAY) }\r\n    val coin = state.coin\r\n    \r\n    Scaffold(\r\n        topBar = {\r\n            TopAppBar(\r\n                title = { \r\n                    Column {\r\n                        Text(\r\n                            text = coin?.name ?: \"Loading...\",\r\n                            maxLines = 1,\r\n                            overflow = TextOverflow.Ellipsis,\r\n                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)\r\n                        )\r\n                        coin?.marketCapRank?.let { rank ->\r\n                            Text(\r\n                                text = \"#$rank\",\r\n                                style = MaterialTheme.typography.bodyMedium.copy(\r\n                                    color = MaterialTheme.colorScheme.onSurfaceVariant\r\n                                )\r\n                            )\r\n                        }\r\n                    }\r\n                },\r\n                navigationIcon = {\r\n                    IconButton(onClick = onBackClick) {\r\n                        Icon(\r\n                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,\r\n                            contentDescription = \"Back\"\r\n                        )\r\n                    }\r\n                },\r\n                actions = {\r\n                    IconButton(\r\n                        onClick = { /* TODO: Add to watchlist */ },\r\n                        enabled = coin != null\r\n                    ) {\r\n                        Icon(\r\n                            imageVector = Icons.Default.Star,\r\n                            contentDescription = \"Add to watchlist\",\r\n                            tint = MaterialTheme.colorScheme.primary\r\n                        )\r\n                    }\r\n                    \r\n                    if (state.isRefreshing) {\r\n                        CircularProgressIndicator(\r\n                            modifier = Modifier.size(24.dp),\r\n                            strokeWidth = 2.dp\r\n                        )\r\n                    } else {\r\n                        IconButton(\r\n                            onClick = { onEvent(CoinDetailUiEvent.Refresh) },\r\n                            enabled = !state.isLoading && coin != null\r\n                        ) {\r\n                            Icon(\r\n                                imageVector = Icons.Default.Refresh,\r\n                                contentDescription = \"Refresh\"\r\n                            )\r\n                        }\r\n                    }\r\n                }\r\n            )\r\n        }\r\n    ) { padding ->\r\n        when {\r\n            state.isLoading -> {\r\n                Box(\r\n                    modifier = Modifier.fillMaxSize(),\r\n                    contentAlignment = Alignment.Center\r\n                ) {\r\n                    CircularProgressIndicator()\r\n                }\r\n            }\r\n            \r\n            coin == null -> {\r\n                Box(\r\n                    modifier = Modifier.fillMaxSize(),\r\n                    contentAlignment = Alignment.Center\r\n                ) {\r\n                    Text(\"Coin not found\")\r\n                }\r\n            }\r\n            \r\n            else -> {\r\n                Column(\r\n                    modifier = modifier\r\n                        .fillMaxSize()\r\n                        .padding(padding)\r\n                        .verticalScroll(rememberScrollState())\r\n                        .padding(16.dp)\r\n                ) {\r\n                    // Price Section\r\n                    Column(\r\n                        modifier = Modifier.fillMaxWidth()\r\n                    ) {\r\n                        Text(\r\n                            text = coin.formattedPrice,\r\n                            style = MaterialTheme.typography.headlineLarge,\r\n                            fontWeight = FontWeight.Bold\r\n                        )\r\n                        \r\n                        Row(\r\n                            verticalAlignment = Alignment.CenterVertically\r\n                        ) {\r\n                            Text(\r\n                                text = \"${if (coin.isPositive24h) \"+\" else \"\"}${String.format(\"Locale.US\", \"%.2f\", coin.priceChangePercentage24h)}% (24H)\",\r\n                                color = if (coin.isPositive24h) Color.Green else Color.Red,\r\n                                style = MaterialTheme.typography.titleMedium,\r\n                                modifier = Modifier.padding(end = 8.dp)\r\n                            )\r\n                        }\r\n                    }\r\n                    \r\n                    // Price Chart\r\n                    Spacer(modifier = Modifier.height(16.dp))\r\n                    \r\n                    // Generate some sample price data for the chart\r\n                    val priceHistory = remember(coin) {\r\n                        val basePrice = coin.currentPrice\r\n                        List(30) { index ->\r\n                            basePrice * (1 + (Math.random() * 0.1 - 0.05).toFloat())\r\n                        }\r\n                    }\r\n                    \r\n                    PriceChart(\r\n                        prices = priceHistory,\r\n                        lineColor = if (coin.isPositive24h) Color.Green else Color.Red,\r\n                        gradientColors = if (coin.isPositive24h) {\r\n                            listOf(\r\n                                Color.Green.copy(alpha = 0.3f),\r\n                                Color.Green.copy(alpha = 0.05f)\r\n                            )\r\n                        } else {\r\n                            listOf(\r\n                                Color.Red.copy(alpha = 0.3f),\r\n                                Color.Red.copy(alpha = 0.05f)\r\n                            )\r\n                        },\r\n                        modifier = Modifier\r\n                            .fillMaxWidth()\r\n                            .height(200.dp)\r\n                    )\r\n                    \r\n                    // Time Range Selector\r\n                    Spacer(modifier = Modifier.height(8.dp))\r\n                    TimeRangeSelector(\r\n                        selectedRange = selectedTimeRange,\r\n                        onRangeSelected = { selectedTimeRange = it },\r\n                        modifier = Modifier.fillMaxWidth()\r\n                    )\r\n                    \r\n                    Spacer(modifier = Modifier.height(24.dp))\r\n                    \r\n                    // Stats Section\r\n                    Text(\r\n                        \"Statistics\",\r\n                        style = MaterialTheme.typography.titleLarge,\r\n                        fontWeight = FontWeight.Bold,\r\n                        modifier = Modifier.padding(bottom = 8.dp)\r\n                    )\r\n                    \r\n                    // Stats Grid\r\n                    Column(\r\n                        modifier = Modifier\r\n                            .fillMaxWidth()\r\n                            .clip(MaterialTheme.shapes.medium)\r\n                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))\r\n                            .padding(16.dp),\r\n                        verticalArrangement = Arrangement.spacedBy(16.dp)\r\n                    ) {\r\n                        // First row\r\n                        Row(\r\n                            modifier = Modifier.fillMaxWidth(),\r\n                            horizontalArrangement = Arrangement.SpaceBetween\r\n                        ) {\r\n                            StatItem(\"Market Cap\", coin.formattedMarketCap, Modifier.weight(1f))\r\n                            Spacer(modifier = Modifier.width(16.dp))\r\n                            StatItem(\"Volume (24h)\", coin.formattedVolume, Modifier.weight(1f))\r\n                        }\r\n                        \r\n                        // Second row\r\n                        Row(\r\n                            modifier = Modifier.fillMaxWidth(),\r\n                            horizontalArrangement = Arrangement.SpaceBetween\r\n                        ) {\r\n                            coin.maxSupply?.let { maxSupply ->\r\n                                StatItem(\"Max Supply\", \"${formatLargeNumber(maxSupply.toLong())} ${coin.symbol.uppercase()}\", \r\n                                    Modifier.weight(1f))\r\n                            } ?: StatItem(\"Circulating Supply\", \"${coin.formattedSupply} ${coin.symbol.uppercase()}\", \r\n                                Modifier.weight(1f))\r\n                            \r\n                            Spacer(modifier = Modifier.width(16.dp))\r\n                            \r\n                            coin.high24h?.let { high ->\r\n                                StatItem(\"24h High\", formatCurrency(high), Modifier.weight(1f))\r\n                            } ?: coin.low24h?.let { low ->\r\n                                StatItem(\"24h Low\", formatCurrency(low), Modifier.weight(1f))\r\n                            } ?: Spacer(modifier = Modifier.weight(1f))\r\n                        }\r\n                    }\r\n                    \r\n                    Spacer(modifier = Modifier.height(24.dp))\r\n                    \r\n                    // About Section\r\n                    Text(\r\n                        \"About ${coin.name}\",\r\n                        style = MaterialTheme.typography.titleLarge,\r\n                        modifier = Modifier.padding(bottom = 8.dp)\r\n                    )\r\n                    \r\n                    // Additional details can be added here\r\n                    // For now, just show some placeholder text\r\n                    Text(\r\n                        \"${coin.name} is a decentralized digital currency, without a central bank or single administrator, \" +\r\n                                \"that can be sent from user to user on the peer-to-peer bitcoin network without the need for intermediaries.\",\r\n                        style = MaterialTheme.typography.bodyMedium,\r\n                        lineHeight = 20.sp\r\n                    )\r\n                    \r\n                    Spacer(modifier = Modifier.height(32.dp))\r\n                }\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nprivate fun StatItem(\r\n    label: String,\r\n    value: String,\r\n    modifier: Modifier = Modifier\r\n) {\r\n    Column(modifier = modifier) {\r\n        Text(\r\n            text = label,\r\n            style = MaterialTheme.typography.bodySmall,\r\n            color = MaterialTheme.colorScheme.onSurfaceVariant\r\n        )\r\n        Spacer(modifier = Modifier.height(4.dp))\r\n        Text(\r\n            text = value,\r\n            style = MaterialTheme.typography.bodyLarge,\r\n            fontWeight = FontWeight.Medium\r\n        )\r\n    }\r\n}\r\n\r\n@Composable\r\nprivate fun TimeRangeSelector(\r\n    selectedRange: TimeRange,\r\n    onRangeSelected: (TimeRange) -> Unit,\r\n    modifier: Modifier = Modifier\r\n) {\r\n    val timeRanges = TimeRange.values()\r\n    \r\n    Row(\r\n        modifier = modifier,\r\n        horizontalArrangement = Arrangement.spacedBy(8.dp)\r\n    ) {\r\n        timeRanges.forEach { range ->\r\n            val isSelected = range == selectedRange\r\n            val buttonColors = ButtonDefaults.buttonColors(\r\n                containerColor = if (isSelected) {\r\n                    MaterialTheme.colorScheme.primary\r\n                } else {\r\n                    MaterialTheme.colorScheme.surfaceVariant\r\n                },\r\n                contentColor = if (isSelected) {\r\n                    MaterialTheme.colorScheme.onPrimary\r\n                } else {\r\n                    MaterialTheme.colorScheme.onSurfaceVariant\r\n                }\r\n            )\r\n            \r\n            Button(\r\n                onClick = { onRangeSelected(range) },\r\n                colors = buttonColors,\r\n                shape = RoundedCornerShape(16.dp),\r\n                modifier = Modifier\r\n                    .weight(1f)\r\n                    .height(32.dp),\r\n                contentPadding = PaddingValues(0.dp)\r\n            ) {\r\n                Text(\r\n                    text = range.displayName,\r\n                    style = MaterialTheme.typography.labelMedium,\r\n                    textAlign = TextAlign.Center\r\n                )\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\nenum class TimeRange(val displayName: String) {\r\n    ONE_HOUR(\"1H\"),\r\n    ONE_DAY(\"1D\"),\r\n    ONE_WEEK(\"1W\"),\r\n    ONE_MONTH(\"1M\"),\r\n    ONE_YEAR(\"1Y\"),\r\n    ALL(\"ALL\")\r\n}\r\n\r\nprivate fun formatLargeNumber(number: Long): String {\r\n    return when {\r\n        number >= 1_000_000_000_000 -> \"${String.format(\"%.2f\", number / 1_000_000_000_000.0)}T\"\r\n        number >= 1_000_000_000 -> \"${String.format(\"%.2f\", number / 1_000_000_000.0)}B\"\r\n        number >= 1_000_000 -> \"${String.format(\"%.2f\", number / 1_000_000.0)}M\"\r\n        number >= 1_000 -> \"${String.format(\"%.1f\", number / 1_000.0)}K\"\r\n        else -> number.toString()\r\n    }\r\n}\r\n\r\nprivate fun formatCurrency(amount: Double): String {\r\n    return NumberFormat.getCurrencyInstance(Locale.US).format(amount)\r\n}\r\n
+===================================================================
+diff --git a/app/src/main/java/com/koin/ui/coindetail/CoinDetailScreen.kt b/app/src/main/java/com/koin/ui/coindetail/CoinDetailScreen.kt
+--- a/app/src/main/java/com/koin/ui/coindetail/CoinDetailScreen.kt	(revision a044f08ae152995761c1bdcbb7243de4eb8ed283)
++++ b/app/src/main/java/com/koin/ui/coindetail/CoinDetailScreen.kt	(date 1751886906333)
+@@ -44,6 +44,7 @@
+ import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
++import com.koin.domain.model.TimeRange
+ import java.text.NumberFormat
+ import java.util.Locale
+ 
+@@ -55,7 +56,7 @@
+     onBackClick: () -> Unit,
+     modifier: Modifier = Modifier
+ ) {
+-    var selectedTimeRange by remember { mutableStateOf(TimeRange.ONE_DAY) }
++    
+     val coin = state.coin
+     
+     Scaffold(
+@@ -171,38 +172,43 @@
+                     // Price Chart
+                     Spacer(modifier = Modifier.height(16.dp))
+                     
+-                    // Generate some sample price data for the chart
+-                    val priceHistory = remember(coin) {
+-                        val basePrice = coin.currentPrice
+-                        List(30) { index ->
+-                            basePrice * (1 + (Math.random() * 0.1 - 0.05).toFloat())
+-                        }
+-                    }
+-                    
+-                    PriceChart(
+-                        prices = priceHistory,
+-                        lineColor = if (coin.isPositive24h) Color.Green else Color.Red,
+-                        gradientColors = if (coin.isPositive24h) {
+-                            listOf(
+-                                Color.Green.copy(alpha = 0.3f),
+-                                Color.Green.copy(alpha = 0.05f)
+-                            )
+-                        } else {
+-                            listOf(
+-                                Color.Red.copy(alpha = 0.3f),
+-                                Color.Red.copy(alpha = 0.05f)
+-                            )
+-                        },
+-                        modifier = Modifier
+-                            .fillMaxWidth()
+-                            .height(200.dp)
+-                    )
++                    Box(
++                        modifier = Modifier
++                            .fillMaxWidth()
++                            .height(200.dp)
++                    ) {
++                        if (state.isLoadingHistoricalData) {
++                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
++                        } else if (state.historicalData.isNotEmpty()) {
++                            PriceChart(
++                                prices = state.historicalData.map { it.price },
++                                lineColor = if (coin.isPositive24h) Color.Green else Color.Red,
++                                gradientColors = if (coin.isPositive24h) {
++                                    listOf(
++                                        Color.Green.copy(alpha = 0.3f),
++                                        Color.Green.copy(alpha = 0.05f)
++                                    )
++                                } else {
++                                    listOf(
++                                        Color.Red.copy(alpha = 0.3f),
++                                        Color.Red.copy(alpha = 0.05f)
++                                    )
++                                },
++                                modifier = Modifier.fillMaxSize()
++                            )
++                        } else {
++                            Text(
++                                "No chart data available.",
++                                modifier = Modifier.align(Alignment.Center)
++                            )
++                        }
++                    }
+                     
+                     // Time Range Selector
+                     Spacer(modifier = Modifier.height(8.dp))
+                     TimeRangeSelector(
+-                        selectedRange = selectedTimeRange,
+-                        onRangeSelected = { selectedTimeRange = it },
++                        selectedRange = state.selectedTimeRange,
++                        onRangeSelected = { onEvent(CoinDetailUiEvent.TimeRangeSelected(it)) },
+                         modifier = Modifier.fillMaxWidth()
+                     )
+                     
+@@ -348,14 +354,7 @@
+     }
+ }
+ 
+-enum class TimeRange(val displayName: String) {
+-    ONE_HOUR("1H"),
+-    ONE_DAY("1D"),
+-    ONE_WEEK("1W"),
+-    ONE_MONTH("1M"),
+-    ONE_YEAR("1Y"),
+-    ALL("ALL")
+-}
++
+ 
+ private fun formatLargeNumber(number: Long): String {
+     return when {
+Index: app/src/main/java/com/koin/data/coin/CoinRepository.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.koin.data.coin\r\n\r\nimport com.koin.data.coin.dto.PriceDataPoint\r\nimport com.koin.data.coin.dto.toPriceDataPoints\r\nimport java.util.Calendar\r\nimport javax.inject.Inject\r\nimport javax.inject.Singleton\r\n\r\n@Singleton\r\nclass CoinRepository @Inject constructor(\r\n    private val api: CoinGeckoApiService,\r\n    // Add database instance here when implementing caching\r\n) {\r\n    suspend fun getCoinMarketChart(\r\n        coinId: String,\r\n        timeRange: TimeRange,\r\n        vsCurrency: String = \"usd\"\r\n    ): List<PriceDataPoint> {\r\n        val calendar = Calendar.getInstance()\r\n        val endTime = calendar.timeInMillis / 1000 // Current time in seconds\r\n        \r\n        // Calculate start time based on the selected time range\r\n        timeRange.days?.let { calendar.add(Calendar.DAY_OF_YEAR, -it) }\r\n        val startTime = calendar.timeInMillis / 1000 // Start time in seconds\r\n        \r\n        return try {\r\n            val response = api.getCoinMarketChartRange(\r\n                id = coinId,\r\n                vsCurrency = vsCurrency,\r\n                from = startTime,\r\n                to = endTime\r\n            )\r\n            response.toPriceDataPoints()\r\n        } catch (e: Exception) {\r\n            // Handle error (e.g., log, return empty list, or rethrow)\r\n            emptyList()\r\n        }\r\n    }\r\n    \r\n    // Add other repository methods here (getCoins, getCoinDetails, etc.)\r\n}\r\n\r\n// Add this to your existing TimeRange.kt file if it doesn't exist\r\n enum class TimeRange(val days: Int) {\r\n     DAY(1),\r\n     WEEK(7),\r\n     MONTH(30),\r\n     YEAR(365),\r\n     FIVE_YEARS(5 * 365)\r\n }\r\n
+===================================================================
+diff --git a/app/src/main/java/com/koin/data/coin/CoinRepository.kt b/app/src/main/java/com/koin/data/coin/CoinRepository.kt
+--- a/app/src/main/java/com/koin/data/coin/CoinRepository.kt	(revision a044f08ae152995761c1bdcbb7243de4eb8ed283)
++++ b/app/src/main/java/com/koin/data/coin/CoinRepository.kt	(date 1751886675600)
+@@ -1,6 +1,8 @@
+ package com.koin.data.coin
+ 
+-import com.koin.data.coin.dto.PriceDataPoint
++import com.koin.domain.model.Coin
++import com.koin.domain.model.PriceDataPoint
++import com.koin.domain.model.TimeRange
+ import com.koin.data.coin.dto.toPriceDataPoints
+ import java.util.Calendar
+ import javax.inject.Inject
+@@ -14,7 +16,7 @@
+     suspend fun getCoinMarketChart(
+         coinId: String,
+         timeRange: TimeRange,
+-        vsCurrency: String = "usd"
++        vsCurrency: String
+     ): List<PriceDataPoint> {
+         val calendar = Calendar.getInstance()
+         val endTime = calendar.timeInMillis / 1000 // Current time in seconds
+@@ -39,12 +41,3 @@
+     
+     // Add other repository methods here (getCoins, getCoinDetails, etc.)
+ }
+-
+-// Add this to your existing TimeRange.kt file if it doesn't exist
+- enum class TimeRange(val days: Int) {
+-     DAY(1),
+-     WEEK(7),
+-     MONTH(30),
+-     YEAR(365),
+-     FIVE_YEARS(5 * 365)
+- }
+Index: app/src/main/java/com/koin/ui/coindetail/CoinDetailViewModel.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.koin.ui.coindetail\r\n\r\nimport androidx.lifecycle.SavedStateHandle\r\nimport androidx.lifecycle.viewModelScope\r\nimport com.koin.data.coin.TimeRange\r\nimport com.koin.data.coin.dto.PriceDataPoint\r\nimport com.koin.domain.coin.Coin\r\nimport com.koin.domain.coin.CoinRepository\r\nimport com.koin.ui.base.BaseViewModel\r\nimport dagger.hilt.android.lifecycle.HiltViewModel\r\nimport kotlinx.coroutines.flow.MutableStateFlow\r\nimport kotlinx.coroutines.flow.catch\r\nimport kotlinx.coroutines.flow.collectLatest\r\nimport kotlinx.coroutines.flow.update\r\nimport kotlinx.coroutines.launch\r\nimport javax.inject.Inject\r\n\r\nsealed class CoinDetailUiEvent {\r\n    object Refresh : CoinDetailUiEvent()\r\n    data class TimeRangeSelected(val timeRange: TimeRange) : CoinDetailUiEvent()\r\n}\r\n\r\n@HiltViewModel\r\nclass CoinDetailViewModel @Inject constructor(\r\n    private val repository: CoinRepository,\r\n    savedStateHandle: SavedStateHandle\r\n) : BaseViewModel<CoinDetailUiState, CoinDetailUiEvent>() {\r\n\r\n    private val coinId: String = checkNotNull(savedStateHandle[\"coinId\"])\r\n    \r\n    override val _uiState: MutableStateFlow<CoinDetailUiState> = \r\n        MutableStateFlow(CoinDetailUiState(coinId = coinId))\r\n\r\n    init {\r\n        loadCoin()\r\n        loadHistoricalData()\r\n    }\r\n\r\n    override fun handleEvent(event: CoinDetailUiEvent) {\r\n        when (event) {\r\n            is CoinDetailUiEvent.Refresh -> {\r\n                loadCoin()\r\n                loadHistoricalData()\r\n            }\r\n            is CoinDetailUiEvent.TimeRangeSelected -> {\r\n                _uiState.update { it.copy(selectedTimeRange = event.timeRange) }\r\n                loadHistoricalData()\r\n            }\r\n        }\r\n    }\r\n\r\n    private fun loadCoin() {\r\n        viewModelScope.launch {\r\n            _uiState.update { it.copy(isLoading = true) }\r\n            \r\n            repository.getCoinById(coinId)\r\n                .catch { e ->\r\n                    _uiState.update { state ->\r\n                        state.copy(\r\n                            error = e.message,\r\n                            isLoading = false,\r\n                            isRefreshing = false\r\n                        )\r\n                    }\r\n                    //Timber.e(e, \"Error loading coin details\")\r\n                }\r\n                .collectLatest { result ->\r\n                    result.onSuccess { coin ->\r\n                        _uiState.update { state ->\r\n                            state.copy(\r\n                                coin = coin,\r\n                                isLoading = false,\r\n                                isRefreshing = false,\r\n                                error = null\r\n                            )\r\n                        }\r\n                    }.onFailure { e ->\r\n                        _uiState.update { state ->\r\n                            state.copy(\r\n                                error = e.message,\r\n                                isLoading = false,\r\n                                isRefreshing = false\r\n                            )\r\n                        }\r\n                    }\r\n                }\r\n        }\r\n    }\r\n\r\n    private fun loadHistoricalData() {\r\n        viewModelScope.launch {\r\n            _uiState.update { it.copy(isLoadingHistoricalData = true) }\r\n            \r\n            try {\r\n                val timeRange = _uiState.value.selectedTimeRange\r\n                val historicalData = repository.getCoinMarketChart(\r\n                    coinId = coinId,\r\n                    timeRange = timeRange,\r\n                    vsCurrency = \"usd\"\r\n                )\r\n                \r\n                _uiState.update { state ->\r\n                    state.copy(\r\n                        historicalData = historicalData,\r\n                        isLoadingHistoricalData = false,\r\n                        error = null\r\n                    )\r\n                }\r\n            } catch (e: Exception) {\r\n                _uiState.update { state ->\r\n                    state.copy(\r\n                        error = e.message,\r\n                        isLoadingHistoricalData = false,\r\n                        historicalData = emptyList() // Clear any previous data on error\r\n                    )\r\n                }\r\n//                Timber.e(e, \"Error loading historical data\")\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\ndata class CoinDetailUiState(\r\n    val coinId: String,\r\n    val coin: Coin? = null,\r\n    val historicalData: List<PriceDataPoint> = emptyList(),\r\n    val isLoading: Boolean = false,\r\n    val isLoadingHistoricalData: Boolean = false,\r\n    val isRefreshing: Boolean = false,\r\n    val error: String? = null,\r\n    val selectedTimeRange: TimeRange = TimeRange.DAY\r\n)\r\n
+===================================================================
+diff --git a/app/src/main/java/com/koin/ui/coindetail/CoinDetailViewModel.kt b/app/src/main/java/com/koin/ui/coindetail/CoinDetailViewModel.kt
+--- a/app/src/main/java/com/koin/ui/coindetail/CoinDetailViewModel.kt	(revision a044f08ae152995761c1bdcbb7243de4eb8ed283)
++++ b/app/src/main/java/com/koin/ui/coindetail/CoinDetailViewModel.kt	(date 1751886866962)
+@@ -1,20 +1,89 @@
+ package com.koin.ui.coindetail
+ 
+ import androidx.lifecycle.SavedStateHandle
++import androidx.lifecycle.ViewModel
+ import androidx.lifecycle.viewModelScope
+-import com.koin.data.coin.TimeRange
+-import com.koin.data.coin.dto.PriceDataPoint
+-import com.koin.domain.coin.Coin
+ import com.koin.domain.coin.CoinRepository
+-import com.koin.ui.base.BaseViewModel
++import com.koin.domain.model.TimeRange
+ import dagger.hilt.android.lifecycle.HiltViewModel
+ import kotlinx.coroutines.flow.MutableStateFlow
+-import kotlinx.coroutines.flow.catch
+-import kotlinx.coroutines.flow.collectLatest
++import kotlinx.coroutines.flow.asStateFlow
+ import kotlinx.coroutines.flow.update
+ import kotlinx.coroutines.launch
+ import javax.inject.Inject
+ 
++@HiltViewModel
++class CoinDetailViewModel @Inject constructor(
++    private val coinRepository: CoinRepository,
++    savedStateHandle: SavedStateHandle
++) : ViewModel() {
++
++    private val _uiState = MutableStateFlow(CoinDetailUiState())
++    val uiState = _uiState.asStateFlow()
++
++    private val coinId: String = savedStateHandle.get<String>("coinId")!!
++
++    init {
++        fetchCoinDetails()
++        fetchHistoricalData(TimeRange.ONE_DAY)
++    }
++
++    fun handleEvent(event: CoinDetailUiEvent) {
++        when (event) {
++            is CoinDetailUiEvent.TimeRangeSelected -> {
++                fetchHistoricalData(event.timeRange)
++            }
++            CoinDetailUiEvent.Refresh -> {
++                fetchCoinDetails(forceRefresh = true)
++            }
++        }
++    }
++
++    private fun fetchCoinDetails(forceRefresh: Boolean = false) {
++        viewModelScope.launch {
++            _uiState.update { it.copy(isLoading = true) }
++            try {
++                val coin = coinRepository.getCoin(coinId, forceRefresh)
++                _uiState.update {
++                    it.copy(
++                        isLoading = false,
++                        coin = coin
++                    )
++                }
++            } catch (e: Exception) {
++                _uiState.update {
++                    it.copy(
++                        isLoading = false,
++                        error = "Failed to load coin details: ${e.message}"
++                    )
++                }
++            }
++        }
++    }
++
++    private fun fetchHistoricalData(timeRange: TimeRange) {
++        viewModelScope.launch {
++            _uiState.update { it.copy(isLoadingHistoricalData = true, selectedTimeRange = timeRange) }
++            try {
++                val historicalData = coinRepository.getCoinMarketChart(coinId, timeRange, "usd")
++                _uiState.update {
++                    it.copy(
++                        isLoadingHistoricalData = false,
++                        historicalData = historicalData
++                    )
++                }
++            } catch (e: Exception) {
++                _uiState.update {
++                    it.copy(
++                        isLoadingHistoricalData = false,
++                        error = "Failed to load chart data: ${e.message}"
++                    )
++                }
++            }
++        }
++    }
++}
++
+ sealed class CoinDetailUiEvent {
+     object Refresh : CoinDetailUiEvent()
+     data class TimeRangeSelected(val timeRange: TimeRange) : CoinDetailUiEvent()
+diff --git a/app/src/main/java/com/koin/CustomDiscoverScreen.kt b/app/src/main/java/CustomDiscoverScreen.kt
+rename from app/src/main/java/com/koin/CustomDiscoverScreen.kt
+rename to app/src/main/java/CustomDiscoverScreen.kt

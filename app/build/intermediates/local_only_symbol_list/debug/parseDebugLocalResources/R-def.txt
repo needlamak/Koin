@@ -1,0 +1,37 @@
+R_DEF: Internal format may change without notice
+local
+color black
+color purple_200
+color purple_500
+color purple_700
+color teal_200
+color teal_700
+color white
+drawable ic_launcher_background
+drawable ic_launcher_foreground
+drawable icons8_google_96
+drawable icons8_image_placeholder_64
+drawable icons8_no_image_50
+drawable icons8_profile_picture_100
+drawable icons8_profile_picture_100___copy
+drawable image_placeholder_64
+drawable no_image_50
+mipmap ic_launcher
+mipmap ic_launcher_round
+string app_name
+string channel_description_price_alerts
+string channel_name_price_alerts
+string error_network
+string error_unknown
+string notification_action_dismiss
+string notification_action_view_details
+string notification_price_above_message
+string notification_price_above_title
+string notification_price_below_message
+string notification_price_below_title
+string workmanager_status_error
+string workmanager_status_running
+string workmanager_status_stopped
+style Theme.Koin
+xml backup_rules
+xml data_extraction_rules
