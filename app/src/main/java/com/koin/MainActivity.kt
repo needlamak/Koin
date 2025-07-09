@@ -30,7 +30,7 @@ import com.koin.ui.coindetail.CoinDetailScreen
 import com.koin.ui.coindetail.CoinDetailViewModel
 import com.koin.ui.coinlist.CoinListScreen
 import com.koin.ui.coinlist.CoinListViewModel
-import com.koin.ui.components.BottomNavBar
+import com.koin.components.BottomNavBar
 import com.koin.ui.profile.ProfileScreen
 import com.koin.ui.profile.ProfileViewModel
 import com.koin.ui.theme.KoinTheme
@@ -54,8 +54,7 @@ class MainActivity : ComponentActivity() {
 fun KoinApp() {
     KoinTheme {
         val navController = rememberNavController()
-        val sessionViewModel: com.koin.ui.session.SessionViewModel =
-            androidx.hilt.navigation.compose.hiltViewModel()
+        val sessionViewModel: com.koin.ui.session.SessionViewModel = hiltViewModel()
         val isLoggedIn by sessionViewModel.isLoggedIn.collectAsState()
         val startDestination = "splash"
         val snackbarHostState = remember { SnackbarHostState() }

@@ -1,20 +1,5 @@
-package com.koin.domain.coin
-
-import com.koin.data.coin.TimeRange
-import com.koin.data.coin.dto.PriceDataPoint
-import com.koin.domain.model.Coin
-import kotlinx.coroutines.flow.Flow
- 
-interface CoinRepository {
-    fun getAllCoins(): Flow<Result<List<Coin>>>
-    fun getCoinById(id: String?): Flow<Result<Coin?>>
-    suspend fun refreshCoins()
-    suspend fun getCoinMarketChart(
-        coinId: String,
-        timeRange: TimeRange,
-        vsCurrency: String = "usd"
-    ): List<PriceDataPoint>
-}
+// In com.koin.data.coin package (e.g., in its own TimeRange.kt file for clarity)
+package com.koin.data.coin
 
 enum class TimeRange(val days: Int?, val displayName: String) { // 'days' is now nullable for 'ALL' or '1H'
     // For 1 hour, you might use 0 or null and handle it specially,

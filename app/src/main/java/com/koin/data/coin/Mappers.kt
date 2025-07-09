@@ -1,8 +1,6 @@
 package com.koin.data.coin
 
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import com.koin.domain.coin.Coin
+import com.koin.domain.model.Coin
 
 // DTO to Domain
 fun CoinDetailDto.toDomain(): Coin {

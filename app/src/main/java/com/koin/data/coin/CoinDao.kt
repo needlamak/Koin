@@ -2,7 +2,6 @@ package com.koin.data.coin
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
-
 @Dao
 interface CoinDao {
     @Query("SELECT * FROM coins ORDER BY marketCapRank ASC")
@@ -36,3 +35,4 @@ interface CoinDao {
     @Query("DELETE FROM coin_chart WHERE timestamp < :cutoff")
     suspend fun pruneOldCharts(cutoff: Long)
 }
+

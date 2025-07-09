@@ -5,8 +5,8 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.koin.data.coin.dto.PriceDataPoint
 import com.koin.data.coin.dto.toPriceDataPoints
-import com.koin.domain.coin.Coin
 import com.koin.domain.coin.CoinRepository
+import com.koin.domain.model.Coin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -30,7 +30,6 @@ class CoinRepositoryImpl @Inject constructor(
     val coins = _coins.asStateFlow()
 
     private val _lastError = MutableStateFlow<String?>(null)
-    val lastError = _lastError.asStateFlow()
 
     override fun getAllCoins(): Flow<Result<List<Coin>>> =
         coins.map { Result.success(it.values.toList()) }
@@ -38,7 +37,7 @@ class CoinRepositoryImpl @Inject constructor(
         coins.map { Result.success(it[id]) }
 
     init {
-        CoroutineScope(Dispatchers.IO).launch @androidx.annotation.RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE) {
+        CoroutineScope(Dispatchers.IO).launch @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE) {
             loadFromCache()
             if (networkUtil.isNetworkAvailable()) {
                 refreshFromNetwork()
@@ -68,7 +67,7 @@ class CoinRepositoryImpl @Inject constructor(
             coinDao.insertAll(domainCoins.map { it.toEntity() })
 
             // Prefetch chart data for all coins and all time ranges
-            val allTimeRanges = TimeRange.values()
+            val allTimeRanges = TimeRange.entries.toTypedArray()
             domainCoins.forEach { coin ->
                 allTimeRanges.forEach { range ->
                     CoroutineScope(Dispatchers.IO).launch {

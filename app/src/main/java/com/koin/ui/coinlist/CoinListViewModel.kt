@@ -1,7 +1,7 @@
 package com.koin.ui.coinlist
 
 import androidx.lifecycle.viewModelScope
-import com.koin.domain.coin.Coin
+import com.koin.domain.model.Coin
 import com.koin.domain.coin.CoinRepository
 import com.koin.ui.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,9 +25,11 @@ class CoinListViewModel @Inject constructor(
 
     override fun handleEvent(event: CoinListUiEvent) {
         when (event) {
-            is CoinListUiEvent.Refresh -> refreshCoins()
+            is CoinListUiEvent.RefreshData -> refreshCoinsData() // For fetching new data
             is CoinListUiEvent.OnSearchQueryChange -> updateSearchQuery(event.query)
             is CoinListUiEvent.OnCoinClick -> { /* Handle navigation to detail */ }
+            is CoinListUiEvent.ResetFilters -> resetAllFilters() // For resetting all active filters
+            is CoinListUiEvent.ResetSearch -> resetSearchQuery() // For clearing just the search query
         }
     }
 
@@ -54,11 +56,11 @@ class CoinListViewModel @Inject constructor(
         }
     }
 
-    private fun refreshCoins() {
+    // Renamed for clarity: This is for refreshing the actual data from the network
+    private fun refreshCoinsData() {
         _uiState.update { it.copy(isRefreshing = true) }
         viewModelScope.launch {
             try {
-                // Assuming repository has a refresh method
                 (repository as? com.koin.data.coin.CoinRepositoryImpl)?.refreshFromNetwork()
                 _uiState.update { it.copy(isRefreshing = false) }
             } catch (e: Exception) {
@@ -82,8 +84,29 @@ class CoinListViewModel @Inject constructor(
         } else {
             coins.filter { coin ->
                 coin.name.contains(query, ignoreCase = true) ||
-                coin.symbol.contains(query, ignoreCase = true)
+                        coin.symbol.contains(query, ignoreCase = true)
             }
+        }
+    }
+
+    // New function: Resets ALL filters (including search, sort, etc.)
+    private fun resetAllFilters() {
+        _uiState.update { state ->
+            state.copy(
+                searchQuery = "", // Clears search
+                filteredCoins = state.coins, // Resets filtered list to all coins
+                // Add any other filter-related state resets here (e.g., sortType = SortType.NAME_ASC, showOnlyPositiveChange = false)
+            )
+        }
+    }
+
+    // New function: Specifically resets only the search query
+    private fun resetSearchQuery() {
+        _uiState.update { state ->
+            state.copy(
+                searchQuery = "",
+                filteredCoins = filterCoins(state.coins, "") // Re-filter with an empty query
+            )
         }
     }
 }
@@ -98,7 +121,19 @@ data class CoinListUiState(
 )
 
 sealed class CoinListUiEvent {
-    object Refresh : CoinListUiEvent()
+    object RefreshData : CoinListUiEvent() // Event for refreshing actual data
     data class OnSearchQueryChange(val query: String) : CoinListUiEvent()
     data class OnCoinClick(val coinId: String) : CoinListUiEvent()
+    object ResetFilters : CoinListUiEvent() // Event for resetting all filters
+    object ResetSearch : CoinListUiEvent() // Event for resetting just the search query
+}
+
+
+enum class SortType {
+    NAME_ASC,
+    NAME_DESC,
+    PRICE_ASC,
+    PRICE_DESC,
+    CHANGE_ASC,
+    CHANGE_DESC
 }
