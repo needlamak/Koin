@@ -59,20 +59,23 @@ ksp {
 }
 
 dependencies {
-    implementation ("androidx.datastore:datastore-preferences:1.1.7")
-    // Remove duplicate paging dependencies at the top
-    implementation(libs.androidx.paging.runtime.ktx)
-    implementation(libs.androidx.paging.compose)
 
+    implementation (libs.androidx.paging.runtime.ktx)
+    //implementation ("androidx.paging:paging-runtime-ktx:3.3.6")
+    implementation (libs.androidx.paging.compose)
+    // DataStore
+    implementation(libs.androidx.datastore.preferences)
+    // Accompanist Pager for tab & horizontal pager
     // Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-
+    
     // WorkManager with Coroutines
     implementation(libs.androidx.hilt.work)
-    ksp(libs.hilt.compiler) // Use hilt-compiler, not androidx.hilt.compiler
+    ksp(libs.androidx.hilt.compiler)
     implementation(libs.androidx.work.runtime.ktx)
+
 
     // Compose UI
     implementation(platform(libs.androidx.compose.bom))
@@ -83,12 +86,16 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    // Lifecycle
+    // Lifecycle (optional if you're using LiveData)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.compose.runtime.livedata)
 
     // Navigation
     implementation(libs.androidx.navigation.compose)
+
+    // Paging
+    implementation(libs.androidx.paging.runtime.ktx)
+    implementation(libs.androidx.paging.compose)
 
     // Hilt
     implementation(libs.hilt.android)
@@ -101,40 +108,41 @@ dependencies {
     implementation(libs.moshi.kotlin)
     implementation(libs.retrofit.converter.moshi)
     ksp(libs.moshi.kotlin.codegen)
-
-    // OkHttp & Logging
+    // OkHttp & Logging - Add these missing dependencies
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
 
-    // Gson Converter
+    // Gson Converter - Add this missing dependency
     implementation(libs.converter.gson)
+
 
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
-
+    
     // Room testing
     testImplementation(libs.androidx.room.testing)
-
+    
     // Kotlin Coroutines Test
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
-
+    
     // MockK for testing
     testImplementation("io.mockk:mockk:1.13.11")
     testImplementation("io.mockk:mockk-agent-jvm:1.13.11")
-
+    
     // Turbine for Flow testing
     testImplementation(libs.turbine)
 
-    // Coil
+    // Coil (Optional for image loading)
     implementation(libs.coil.compose)
 
-    // Charts - Use Vico instead of MPAndroidChart for Compose
-    implementation(libs.vico.compose)
-    implementation(libs.vico.compose.m3)
-    implementation(libs.vico.core)
-    implementation(libs.vico.views)
+    // Charts
+    implementation(libs.mpandroidchart)
+    implementation(libs.compose)
+    implementation(libs.compose.m3)
+    implementation(libs.core)
+    implementation(libs.views)
 
     // Testing
     testImplementation(libs.junit)
@@ -146,9 +154,7 @@ dependencies {
     // Gson
     implementation(libs.gson)
 
-    // Material Icons
-    implementation(libs.androidx.material.icons.extended)
-
-    // Adaptive Navigation
-    implementation(libs.androidx.adaptive.navigation)
+    // For the full set of Material Icons (larger APK size, use with R8/ProGuard)
+    implementation(libs.androidx.material.icons.extended) // Check Maven Central for the latest stable version
+    implementation(libs.androidx.adaptive.navigation) // This version includes PullToRefreshBox
 }
