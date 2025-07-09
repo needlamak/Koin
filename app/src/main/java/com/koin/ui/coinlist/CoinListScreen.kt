@@ -10,7 +10,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,19 +21,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -42,10 +41,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,30 +58,37 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.koin.components.BottomNavBar
 import com.koin.domain.model.Coin
+import com.koin.util.NetworkMonitor
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3AdaptiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoinListScreen(
     state: CoinListUiState,
     onEvent: (CoinListUiEvent) -> Unit,
     onCoinClick: (String) -> Unit,
+    navController: NavController,
     modifier: Modifier = Modifier
 ) {
+
+    val context = LocalContext.current
     val listState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope() // For launching scroll coroutine
+    val coroutineScope = rememberCoroutineScope()
 
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
     var showFilters by rememberSaveable { mutableStateOf(false) }
-
     var selectedSortType by rememberSaveable { mutableStateOf(SortType.NAME_ASC) }
     var showOnlyPositiveChange by rememberSaveable { mutableStateOf(false) }
 
@@ -91,25 +97,27 @@ fun CoinListScreen(
         label = "filterRotation"
     )
 
-    // State to control toolbar visibility (and now FAB visibility)
     var showToolbarAndFab by remember { mutableStateOf(true) }
-    // State to control scroll to top FAB visibility (only appears if scrolled down)
     val showScrollToTopButton by remember {
         derivedStateOf {
             listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
         }
     }
 
+    // Network state
+    val networkMonitor = remember { NetworkMonitor(context) }
+    val isNetworkAvailable by networkMonitor.isNetworkAvailable.collectAsState()
+
+    // Keep search query in sync with state
     LaunchedEffect(state.searchQuery) {
         searchQuery = state.searchQuery
     }
 
-    // Effect for toolbar and FAB hide/show on scroll
+    // Hide toolbar and FAB on scroll down
     LaunchedEffect(listState) {
         var previousOffset = listState.firstVisibleItemScrollOffset
         snapshotFlow { listState.firstVisibleItemScrollOffset }
             .map { currentOffset ->
-                // Determine if scrolling down. Add a small buffer to avoid flickering
                 currentOffset > previousOffset && currentOffset > 0
             }
             .distinctUntilChanged()
@@ -122,10 +130,10 @@ fun CoinListScreen(
     Scaffold(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .statusBarsPadding(),
         topBar = {
             AnimatedVisibility(
-                visible = showToolbarAndFab, // Controls the entire top bar
+                visible = showToolbarAndFab,
                 enter = slideInVertically() + fadeIn(),
                 exit = slideOutVertically() + fadeOut()
             ) {
@@ -136,9 +144,7 @@ fun CoinListScreen(
                         searchQuery = newQuery
                         onEvent(CoinListUiEvent.OnSearchQueryChange(newQuery))
                     },
-                    onSearch = { _ ->
-                        isSearchActive = false
-                    },
+                    onSearch = { isSearchActive = false },
                     onActiveChange = { active -> isSearchActive = active },
                     onResetSearch = {
                         searchQuery = ""
@@ -161,29 +167,32 @@ fun CoinListScreen(
         },
         floatingActionButton = {
             AnimatedVisibility(
-                visible = showToolbarAndFab && showScrollToTopButton, // FAB also hides with toolbar
+                visible = showToolbarAndFab && showScrollToTopButton,
                 enter = fadeIn() + scaleIn(),
                 exit = fadeOut() + scaleOut()
             ) {
-                SmallFloatingActionButton( // <<< Changed to SmallFloatingActionButton
+                SmallFloatingActionButton(
                     onClick = {
                         coroutineScope.launch {
-                            listState.animateScrollToItem(0) // <<< Corrected to scroll to top
+                            listState.animateScrollToItem(0)
                         }
                     }
                 ) {
                     Icon(Icons.Filled.ArrowUpward, "Scroll to top")
                 }
             }
+        },
+        bottomBar = {
+            BottomNavBar(navController = navController as NavHostController)
         }
     ) { paddingValues ->
+        val paddingValues = paddingValues
         Column(
-
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(vertical = 10.dp)
         ) {
-            // Filter section with animation (remains same logic, applying the 'modifier = Modifier' fix)
+            // Filter section
             AnimatedVisibility(
                 visible = showFilters,
                 enter = expandVertically() + fadeIn(),
@@ -216,11 +225,9 @@ fun CoinListScreen(
                                 ),
                                 ascending = selectedSortType == SortType.NAME_ASC,
                                 onClick = {
-                                    selectedSortType = if (selectedSortType == SortType.NAME_ASC)
-                                        SortType.NAME_DESC else SortType.NAME_ASC
-                                    // TODO: Dispatch sort event to ViewModel if needed
-                                },
-                                modifier = Modifier // Added this for the fix
+                                    selectedSortType =
+                                        if (selectedSortType == SortType.NAME_ASC) SortType.NAME_DESC else SortType.NAME_ASC
+                                }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             SortTypeChip(
@@ -231,11 +238,9 @@ fun CoinListScreen(
                                 ),
                                 ascending = selectedSortType == SortType.PRICE_ASC,
                                 onClick = {
-                                    selectedSortType = if (selectedSortType == SortType.PRICE_ASC)
-                                        SortType.PRICE_DESC else SortType.PRICE_ASC
-                                    // TODO: Dispatch sort event to ViewModel if needed
-                                },
-                                modifier = Modifier // Added this for the fix
+                                    selectedSortType =
+                                        if (selectedSortType == SortType.PRICE_ASC) SortType.PRICE_DESC else SortType.PRICE_ASC
+                                }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             SortTypeChip(
@@ -246,11 +251,9 @@ fun CoinListScreen(
                                 ),
                                 ascending = selectedSortType == SortType.CHANGE_ASC,
                                 onClick = {
-                                    selectedSortType = if (selectedSortType == SortType.CHANGE_ASC)
-                                        SortType.CHANGE_DESC else SortType.CHANGE_ASC
-                                    // TODO: Dispatch sort event to ViewModel if needed
-                                },
-                                modifier = Modifier // Added this for the fix
+                                    selectedSortType =
+                                        if (selectedSortType == SortType.CHANGE_ASC) SortType.CHANGE_DESC else SortType.CHANGE_ASC
+                                }
                             )
                         }
                         Row(
@@ -261,7 +264,8 @@ fun CoinListScreen(
                         ) {
                             Checkbox(
                                 checked = showOnlyPositiveChange,
-                                onCheckedChange = { showOnlyPositiveChange = it })
+                                onCheckedChange = { showOnlyPositiveChange = it }
+                            )
                             Text(
                                 "Show only positive change",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -272,7 +276,7 @@ fun CoinListScreen(
                 }
             }
 
-            // Main content area with PullToRefreshBox
+            // Main content area
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -284,36 +288,35 @@ fun CoinListScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     when {
-                        state.isLoading && state.coins.isEmpty() -> {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
-                            }
+                        // Show loading if loading is in progress and no data
+                        state.isLoading -> {
+                            LoadingState()
                         }
 
-                        state.error != null -> {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Spacer(Modifier.height(20.dp))
-                                Text(
-                                    text = "Error: ${state.error}",
-                                    color = MaterialTheme.colorScheme.error,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(16.dp)
-                                )
-                            }
+                        // Show error if there's an error and no coins
+                        state.error != null && state.coins.isEmpty() -> {
+                            ErrorEmptyState(
+                                error = state.error,
+                                isNetworkAvailable = isNetworkAvailable,
+                                onRetry = { onEvent(CoinListUiEvent.RefreshData) }
+                            )
                         }
 
-                        state.filteredCoins.isEmpty() && !state.isLoading -> {
+                        // Show empty data state only if data is empty and there is no error
+                        state.coins.isEmpty() -> {
+                            DataEmptyState(
+                                isNetworkAvailable = isNetworkAvailable,
+                                onRetry = { onEvent(CoinListUiEvent.RefreshData) }
+                            )
+                        }
+
+                        // Show empty filtered state if the full list isn't empty, but search returns nothing
+                        state.filteredCoins.isEmpty() -> {
                             EmptySearchState()
                         }
 
+                        // Finally, show list if all above are false
                         else -> {
-
                             LazyColumn(
                                 state = listState,
                                 modifier = Modifier.fillMaxSize(),
@@ -326,6 +329,7 @@ fun CoinListScreen(
                             }
                         }
                     }
+
                 }
             }
         }
@@ -415,7 +419,7 @@ private fun SortTypeChip(
                 if (selected) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
-                        Icons.Default.Notifications,
+                        Icons.AutoMirrored.Filled.Sort,
                         contentDescription = if (ascending) "Ascending" else "Descending",
                         modifier = Modifier
                             .size(16.dp)

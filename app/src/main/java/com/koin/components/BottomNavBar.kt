@@ -32,10 +32,17 @@ fun BottomNavBar(navController: NavHostController) {
             NavigationBarItem(
                 selected = selected,
                 onClick = {
-                    if (!selected) navController.navigate(item.route) {
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+                    if (!selected) {
+                        navController.navigate(item.route) {
+                            // Pop up to the first bottom nav destination (coin_list)
+                            // This prevents multiple instances of bottom nav screens
+                            popUpTo("coin_list") {
+                                saveState = true
+                                inclusive = false // Keep coin_list as the base
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 },
                 icon = {

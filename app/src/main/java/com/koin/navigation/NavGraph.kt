@@ -50,7 +50,8 @@ fun NavGraph(
                 onEvent = viewModel::onEvent,
                 onCoinClick = { coinId ->
                     navController.navigate(Screen.CoinDetail.createRoute(coinId))
-                }
+                },
+                navController = navController
             )
         }
 
@@ -97,7 +98,8 @@ fun NavGraph(
                         }
                         launchSingleTop = true
                     }
-                }
+                },
+                navController = navController
             )
         }
     }

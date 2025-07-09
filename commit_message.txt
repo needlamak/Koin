@@ -1,0 +1,6 @@
+Refactor: Improve navigation structure
+
+- Extract navigation graph to NavGraph.kt
+- Define navigation routes in Screen.kt
+- Update MainActivity.kt to use the new navigation structure
+- Attempted to fix build issues by adjusting Kotlin and KSP versions.
