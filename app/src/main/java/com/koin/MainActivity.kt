@@ -20,19 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.koin.ui.auth.AuthScreen
-import com.koin.ui.auth.AuthViewModel
-import com.koin.ui.coindetail.CoinDetailScreen
-import com.koin.ui.coindetail.CoinDetailViewModel
-import com.koin.ui.coinlist.CoinListScreen
-import com.koin.ui.coinlist.CoinListViewModel
 import com.koin.components.BottomNavBar
-import com.koin.ui.profile.ProfileScreen
-import com.koin.ui.profile.ProfileViewModel
+import com.koin.navigation.Screen
 import com.koin.ui.theme.KoinTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -56,7 +47,6 @@ fun KoinApp() {
         val navController = rememberNavController()
         val sessionViewModel: com.koin.ui.session.SessionViewModel = hiltViewModel()
         val isLoggedIn by sessionViewModel.isLoggedIn.collectAsState()
-        val startDestination = "splash"
         val snackbarHostState = remember { SnackbarHostState() }
         val coroutineScope = rememberCoroutineScope()
 
@@ -80,81 +70,20 @@ fun KoinApp() {
             bottomBar = {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
-                val hideBottomBarRoutes = setOf("splash", "auth", "coin_detail")
+                val hideBottomBarRoutes =
+                    setOf(Screen.Splash.route, Screen.Auth.route, "coin_detail")
                 if (currentRoute !in hideBottomBarRoutes) {
                     BottomNavBar(navController)
                 }
             }
+
         ) { innerPadding ->
-            NavHost(
+            com.koin.navigation.NavGraph(
                 navController = navController,
-                startDestination = startDestination,
-                modifier = Modifier.padding(innerPadding)
-            ) {
-                // 🚀 Splash
-                composable("splash") {
-                    com.koin.ui.splash.SplashScreen(navController)
-                }
-                composable("coin_list") {
-                    val viewModel: CoinListViewModel = hiltViewModel()
-                    val state by viewModel.uiState.collectAsState()
-
-                    LaunchedEffect(state.error) {
-                        state.error?.let { showError(it) }
-                    }
-
-                    CoinListScreen(
-                        state = state,
-                        onEvent = viewModel::onEvent,
-                        onCoinClick = { coinId ->
-                            navController.navigate("coin_detail/$coinId")
-                        }
-                    )
-                }
-
-                composable("coin_detail/{coinId}") { backStackEntry ->
-                    val viewModel: CoinDetailViewModel = hiltViewModel()
-                    val state by viewModel.uiState.collectAsState()
-
-                    LaunchedEffect(state.error) {
-                        state.error?.let { showError(it) }
-                    }
-
-                    CoinDetailScreen(
-                        state = state,
-                        onEvent = viewModel::onEvent,
-                        onBackClick = { navController.popBackStack() }
-                    )
-                }
-                // ✅ Auth destination
-                composable("auth") {
-                    val viewModel: AuthViewModel = hiltViewModel()
-                    AuthScreen(
-                        viewModel = viewModel,
-                        onRegistered = {
-                            navController.navigate("coin_list") {
-                                launchSingleTop = true
-                                popUpTo("coin_list") { inclusive = false }
-                                popUpTo("auth") { inclusive = true }
-                            }
-                        }
-                    )
-                }
-
-                // ✅ Profile screen after login
-                composable("profile") {
-                    val viewModel: ProfileViewModel = hiltViewModel()
-                    ProfileScreen(viewModel = viewModel, onLogout = {
-                        navController.navigate("profile") {
-                            launchSingleTop = true
-                            popUpTo("profile") { inclusive = false }
-                            launchSingleTop = true
-                            popUpTo("auth") { inclusive = false }
-                        }
-                    }
-                    )
-                }
-            }
+                modifier = Modifier.padding(innerPadding),
+                showError = ::showError
+            )
         }
     }
 }
+
