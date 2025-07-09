@@ -2,6 +2,7 @@ package com.koin.domain.coin
 
 import com.koin.data.coin.TimeRange
 import com.koin.data.coin.dto.PriceDataPoint
+import com.koin.domain.model.Coin
 import kotlinx.coroutines.flow.Flow
  
 interface CoinRepository {

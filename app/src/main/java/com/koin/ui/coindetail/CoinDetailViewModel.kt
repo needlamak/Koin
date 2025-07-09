@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.koin.data.coin.TimeRange
 import com.koin.data.coin.dto.PriceDataPoint
-import com.koin.domain.coin.Coin
+import com.koin.domain.model.Coin
 import com.koin.domain.coin.CoinRepository
 import com.koin.ui.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,39 +27,47 @@ class CoinDetailViewModel @Inject constructor(
 ) : BaseViewModel<CoinDetailUiState, CoinDetailUiEvent>() {
 
     private val coinId: String = checkNotNull(savedStateHandle["coinId"])
-    
-    override val _uiState: MutableStateFlow<CoinDetailUiState> = 
+
+    override val _uiState: MutableStateFlow<CoinDetailUiState> =
         MutableStateFlow(CoinDetailUiState(coinId = coinId))
 
     init {
-        loadCoin()
-        loadHistoricalData()
+        // Initial load should not set isRefreshing to true for a 'pull' action,
+        // but rather isLoading. isRefreshing is specifically for pull-to-refresh.
+        loadCoin(isRefresh = false)
+        loadHistoricalData(isRefresh = false)
     }
 
     override fun handleEvent(event: CoinDetailUiEvent) {
         when (event) {
             is CoinDetailUiEvent.Refresh -> {
-                loadCoin()
-                loadHistoricalData()
+                // When a Refresh event comes from pull-to-refresh, set isRefreshing to true
+                _uiState.update { it.copy(isRefreshing = true) }
+                loadCoin(isRefresh = true)
+                loadHistoricalData(isRefresh = true)
             }
             is CoinDetailUiEvent.TimeRangeSelected -> {
                 _uiState.update { it.copy(selectedTimeRange = event.timeRange) }
-                loadHistoricalData()
+                loadHistoricalData(isRefresh = false) // Time range change is not a "refresh"
             }
         }
     }
 
-    private fun loadCoin() {
+    private fun loadCoin(isRefresh: Boolean = false) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            
+            // Only set isLoading if it's not a refresh (initial load or explicit non-refresh)
+            // isRefreshing handles the loading state for pull-to-refresh
+            if (!isRefresh) {
+                _uiState.update { it.copy(isLoading = true) }
+            }
+
             repository.getCoinById(coinId)
                 .catch { e ->
                     _uiState.update { state ->
                         state.copy(
                             error = e.message,
                             isLoading = false,
-                            isRefreshing = false
+                            isRefreshing = false // Always reset isRefreshing on completion
                         )
                     }
                     //Timber.e(e, "Error loading coin details")
@@ -70,7 +78,7 @@ class CoinDetailViewModel @Inject constructor(
                             state.copy(
                                 coin = coin,
                                 isLoading = false,
-                                isRefreshing = false,
+                                isRefreshing = false, // Always reset isRefreshing on completion
                                 error = null
                             )
                         }
@@ -79,7 +87,7 @@ class CoinDetailViewModel @Inject constructor(
                             state.copy(
                                 error = e.message,
                                 isLoading = false,
-                                isRefreshing = false
+                                isRefreshing = false // Always reset isRefreshing on completion
                             )
                         }
                     }
@@ -87,10 +95,13 @@ class CoinDetailViewModel @Inject constructor(
         }
     }
 
-    private fun loadHistoricalData() {
+    private fun loadHistoricalData(isRefresh: Boolean = false) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingHistoricalData = true) }
-            
+            // Only set isLoadingHistoricalData if it's not a refresh
+            if (!isRefresh) {
+                _uiState.update { it.copy(isLoadingHistoricalData = true) }
+            }
+
             try {
                 val timeRange = _uiState.value.selectedTimeRange
                 val historicalData = repository.getCoinMarketChart(
@@ -98,11 +109,12 @@ class CoinDetailViewModel @Inject constructor(
                     timeRange = timeRange,
                     vsCurrency = "usd"
                 )
-                
+
                 _uiState.update { state ->
                     state.copy(
                         historicalData = historicalData,
                         isLoadingHistoricalData = false,
+                        isRefreshing = false, // Always reset isRefreshing on completion
                         error = null
                     )
                 }
@@ -111,7 +123,8 @@ class CoinDetailViewModel @Inject constructor(
                     state.copy(
                         error = e.message,
                         isLoadingHistoricalData = false,
-                        historicalData = emptyList() // Clear any previous data on error
+                        historicalData = emptyList(), // Clear any previous data on error
+                        isRefreshing = false // Always reset isRefreshing on completion
                     )
                 }
 //                Timber.e(e, "Error loading historical data")
@@ -128,5 +141,106 @@ data class CoinDetailUiState(
     val isLoadingHistoricalData: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val selectedTimeRange: TimeRange = TimeRange.DAY
+    val selectedTimeRange: TimeRange = TimeRange.ONE_DAY
 )
+
+//@HiltViewModel
+//class CoinDetailViewModel @Inject constructor(
+//    private val repository: CoinRepository,
+//    savedStateHandle: SavedStateHandle
+//) : BaseViewModel<CoinDetailUiState, CoinDetailUiEvent>() {
+//
+//    private val coinId: String = checkNotNull(savedStateHandle["coinId"])
+//
+//    override val _uiState: MutableStateFlow<CoinDetailUiState> =
+//        MutableStateFlow(CoinDetailUiState(coinId = coinId))
+//
+//    init {
+//        loadCoin()
+//        loadHistoricalData()
+//    }
+//
+//    override fun handleEvent(event: CoinDetailUiEvent) {
+//        when (event) {
+//            is CoinDetailUiEvent.Refresh -> {
+//                loadCoin()
+//                loadHistoricalData()
+//            }
+//            is CoinDetailUiEvent.TimeRangeSelected -> {
+//                _uiState.update { it.copy(selectedTimeRange = event.timeRange) }
+//                loadHistoricalData()
+//            }
+//        }
+//    }
+//
+//    private fun loadCoin() {
+//        viewModelScope.launch {
+//            _uiState.update { it.copy(isLoading = true) }
+//
+//            repository.getCoinById(coinId)
+//                .catch { e ->
+//                    _uiState.update { state ->
+//                        state.copy(
+//                            error = e.message,
+//                            isLoading = false,
+//                            isRefreshing = false
+//                        )
+//                    }
+//                    //Timber.e(e, "Error loading coin details")
+//                }
+//                .collectLatest { result ->
+//                    result.onSuccess { coin ->
+//                        _uiState.update { state ->
+//                            state.copy(
+//                                coin = coin,
+//                                isLoading = false,
+//                                isRefreshing = false,
+//                                error = null
+//                            )
+//                        }
+//                    }.onFailure { e ->
+//                        _uiState.update { state ->
+//                            state.copy(
+//                                error = e.message,
+//                                isLoading = false,
+//                                isRefreshing = false
+//                            )
+//                        }
+//                    }
+//                }
+//        }
+//    }
+//
+//    private fun loadHistoricalData() {
+//        viewModelScope.launch {
+//            _uiState.update { it.copy(isLoadingHistoricalData = true) }
+//
+//            try {
+//                val timeRange = _uiState.value.selectedTimeRange
+//                val historicalData = repository.getCoinMarketChart(
+//                    coinId = coinId,
+//                    timeRange = timeRange,
+//                    vsCurrency = "usd"
+//                )
+//
+//                _uiState.update { state ->
+//                    state.copy(
+//                        historicalData = historicalData,
+//                        isLoadingHistoricalData = false,
+//                        error = null
+//                    )
+//                }
+//            } catch (e: Exception) {
+//                _uiState.update { state ->
+//                    state.copy(
+//                        error = e.message,
+//                        isLoadingHistoricalData = false,
+//                        historicalData = emptyList() // Clear any previous data on error
+//                    )
+//                }
+////                Timber.e(e, "Error loading historical data")
+//            }
+//        }
+//    }
+//}
+
