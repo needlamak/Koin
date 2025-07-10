@@ -8,7 +8,7 @@ import javax.inject.Singleton
 class GetPortfolioUseCase @Inject constructor(
     private val repository: PortfolioRepository
 ) {
-    operator fun invoke(): Flow<Result<Portfolio>> = repository.getPortfolio()
+    operator fun invoke(): Flow<List<PortfolioHolding>> = repository.getHoldings()
 }
 
 @Singleton
@@ -16,11 +16,9 @@ class BuyCoinUseCase @Inject constructor(
     private val repository: PortfolioRepository
 ) {
     suspend operator fun invoke(
-        coinId: String,
-        quantity: Double,
-        pricePerCoin: Double,
-        transactionFee: Double = 0.0
-    ): Result<Unit> = repository.buyCoin(coinId, quantity, pricePerCoin, transactionFee)
+        coin: com.koin.domain.model.Coin,
+        amount: Double
+    ): Unit = repository.buyCoin(coin, amount)
 }
 
 @Singleton
@@ -30,9 +28,8 @@ class SellCoinUseCase @Inject constructor(
     suspend operator fun invoke(
         coinId: String,
         quantity: Double,
-        pricePerCoin: Double,
-        transactionFee: Double = 0.0
-    ): Result<Unit> = repository.sellCoin(coinId, quantity, pricePerCoin, transactionFee)
+        pricePerCoin: Double
+    ): Unit = repository.sellCoin(coinId, quantity, pricePerCoin)
 }
 
 @Singleton
@@ -53,8 +50,15 @@ class GetTransactionHistoryUseCase @Inject constructor(
 class GetBalanceUseCase @Inject constructor(
     private val repository: PortfolioRepository
 ) {
-    suspend operator fun invoke(): Double = repository.getBalance()
+    operator fun invoke(): Flow<PortfolioBalance?> = repository.getBalance()
 }
+
+//@Singleton
+//class GetBalanceUseCase @Inject constructor(
+//    private val repository: PortfolioRepository
+//) {
+//    suspend operator fun invoke(): Flow<PortfolioBalance?> = repository.getBalance()
+//}
 
 @Singleton
 class ResetPortfolioUseCase @Inject constructor(

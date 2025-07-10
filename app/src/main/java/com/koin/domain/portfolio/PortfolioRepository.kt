@@ -2,30 +2,28 @@ package com.koin.domain.portfolio
 
 import kotlinx.coroutines.flow.Flow
 
-interface PortfolioRepository {
-    fun getPortfolio(): Flow<Result<Portfolio>>
-    
-    suspend fun buyCoin(
-        coinId: String,
-        quantity: Double,
-        pricePerCoin: Double,
-        transactionFee: Double = 0.0
-    ): Result<Unit>
-    
-    suspend fun sellCoin(
-        coinId: String,
-        quantity: Double,
-        pricePerCoin: Double,
-        transactionFee: Double = 0.0
-    ): Result<Unit>
-    
-    suspend fun refreshPortfolio()
-    
-    suspend fun getTransactionHistory(): List<Transaction>
-    
-    suspend fun getBalance(): Double
-    
-    suspend fun resetPortfolio()
+data class PortfolioBalance(
+    val balance: Double,
+    val lastUpdated: Long
+)
 
-    suspend fun addCoinToHoldingForTest(coinId: String, quantity: Double, pricePerCoin: Double): Result<Unit>
+data class PortfolioTransaction(
+    val id: String,
+    val coinId: String,
+    val type: String, // "BUY" or "SELL"
+    val quantity: Double,
+    val pricePerCoin: Double,
+    val transactionFee: Double,
+    val timestamp: Long
+)
+
+interface PortfolioRepository {
+    fun getHoldings(): Flow<List<PortfolioHolding>>
+    fun getTransactionsForCoin(coinId: String): Flow<List<PortfolioTransaction>>
+    fun getBalance(): Flow<PortfolioBalance?>
+    suspend fun buyCoin(coin: com.koin.domain.model.Coin, amount: Double)
+    suspend fun sellCoin(coinId: String, quantity: Double, pricePerCoin: Double)
+    suspend fun refreshPortfolio()
+    suspend fun getTransactionHistory(): List<Transaction>
+    suspend fun resetPortfolio()
 }

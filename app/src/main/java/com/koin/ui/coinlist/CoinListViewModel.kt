@@ -6,6 +6,7 @@ import com.koin.domain.coin.CoinRepository
 import com.koin.domain.user.UserRepository
 import com.koin.domain.watchlist.WatchlistItem
 import com.koin.domain.watchlist.WatchlistRepository
+import com.koin.domain.portfolio.PortfolioRepository
 import com.koin.ui.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,8 @@ import javax.inject.Inject
 class CoinListViewModel @Inject constructor(
     private val repository: CoinRepository,
     private val userRepository: UserRepository,
-    private val watchlistRepository: WatchlistRepository
+    private val watchlistRepository: WatchlistRepository,
+    private val portfolioRepository: PortfolioRepository
 ) : BaseViewModel<CoinListUiState, CoinListUiEvent>() {
 
     override val _uiState: MutableStateFlow<CoinListUiState> = MutableStateFlow(CoinListUiState())
@@ -36,6 +38,7 @@ class CoinListViewModel @Inject constructor(
             is CoinListUiEvent.ResetFilters -> resetAllFilters() // For resetting all active filters
             is CoinListUiEvent.ResetSearch -> resetSearchQuery() // For clearing just the search query
             is CoinListUiEvent.ToggleWatchlist -> toggleWatchlist(event.coin)
+            is CoinListUiEvent.BuyCoin -> buyCoin(event.coin, event.amount)
         }
     }
 
@@ -134,7 +137,18 @@ class CoinListViewModel @Inject constructor(
             }
         }
     }
+
+    private fun buyCoin(coin: Coin, amount: Double) {
+        viewModelScope.launch {
+            try {
+                portfolioRepository.buyCoin(coin, amount)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to buy coin: ${e.message}") }
+            }
+        }
+    }
 }
+
 
 data class CoinListUiState(
     val coins: List<Coin> = emptyList(),
@@ -152,7 +166,9 @@ sealed class CoinListUiEvent {
     object ResetFilters : CoinListUiEvent() // Event for resetting all filters
     object ResetSearch : CoinListUiEvent() // Event for resetting just the search query
     data class ToggleWatchlist(val coin: Coin) : CoinListUiEvent()
+    data class BuyCoin(val coin: Coin, val amount: Double) : CoinListUiEvent()
 }
+
 
 
 enum class SortType {

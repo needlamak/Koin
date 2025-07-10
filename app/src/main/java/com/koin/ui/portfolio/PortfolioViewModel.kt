@@ -7,16 +7,21 @@ import com.koin.domain.coin.CoinRepository
 import com.koin.domain.portfolio.BuyCoinUseCase
 import com.koin.domain.portfolio.GetPortfolioUseCase
 import com.koin.domain.portfolio.Portfolio
+import com.koin.domain.portfolio.PortfolioBalance
+import com.koin.domain.portfolio.PortfolioHolding
 import com.koin.domain.portfolio.RefreshPortfolioUseCase
 import com.koin.domain.portfolio.ResetPortfolioUseCase
 import com.koin.domain.portfolio.SellCoinUseCase
-import com.koin.domain.portfolio.AddCoinToHoldingForTestUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.combineTransform
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -28,7 +33,7 @@ class PortfolioViewModel @Inject constructor(
     private val sellCoinUseCase: SellCoinUseCase,
     private val refreshPortfolioUseCase: RefreshPortfolioUseCase,
     private val resetPortfolioUseCase: ResetPortfolioUseCase,
-    private val addCoinToHoldingForTestUseCase: AddCoinToHoldingForTestUseCase,
+    private val getBalanceUseCase: com.koin.domain.portfolio.GetBalanceUseCase,
     coinRepository: CoinRepository
 ) : ViewModel() {
 
@@ -40,63 +45,51 @@ class PortfolioViewModel @Inject constructor(
     private val _showBottomSheet = MutableStateFlow(false)
     private val _selectedTimeRange = MutableStateFlow(TimeRange.ALL)
 
-    // Single data source for portfolio
-    private val portfolioResult = getPortfolioUseCase()
-        .catch { emit(Result.failure(it)) }
-        .onStart { _isLoading.value = true }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            Result.success(Portfolio.empty())
-        )
+    // Create the balance flow
+    private val balanceFlow = flow {
+        emitAll(getBalanceUseCase())
+    }.flowOn(Dispatchers.IO)
 
-    val uiState = combine(
+    // Single data source for portfolio using combineTransform
+    val uiState = combineTransform(
+        getPortfolioUseCase(), // Flow<List<PortfolioHolding>>
+        balanceFlow,           // Flow<PortfolioBalance?>
         _isLoading,
-        portfolioResult,
         _error,
         _isRefreshing,
         _showBuyDialog,
         _selectedCoinForBuy,
         _showBottomSheet,
-        _selectedTimeRange  // Added this missing flow
+        _selectedTimeRange
     ) { flows ->
-        val isLoading = flows[0] as Boolean
-        val portfolioResult = flows[1] as Result<Portfolio>
-        val error = flows[2] as String?
-        val isRefreshing = flows[3] as Boolean
-        val showBuyDialog = flows[4] as Boolean
-        val selectedCoinForBuy = flows[5] as String?
-        val showBottomSheet = flows[6] as Boolean
-        val selectedTimeRange = flows[7] as TimeRange
+        val holdings = flows[0] as List<PortfolioHolding>
+        val balance = flows[1] as PortfolioBalance?
+        val isLoading = flows[2] as Boolean
+        val error = flows[3] as String?
+        val isRefreshing = flows[4] as Boolean
+        val showBuyDialog = flows[5] as Boolean
+        val selectedCoinForBuy = flows[6] as String?
+        val showBottomSheet = flows[7] as Boolean
+        val selectedTimeRange = flows[8] as TimeRange
 
-        portfolioResult.fold(
-            onSuccess = { portfolio ->
-                _isLoading.value = false
-                _error.value = null
-                PortfolioUiState(
-                    isLoading = isLoading && portfolio.holdings.isEmpty(),
-                    portfolio = portfolio,
-                    error = error,
-                    isRefreshing = isRefreshing,
-                    showBuyDialog = showBuyDialog,
-                    selectedCoinForBuy = selectedCoinForBuy,
-                    showBottomSheet = showBottomSheet,
-                    selectedTimeRange = selectedTimeRange
-                )
-            },
-            onFailure = { exception ->
-                _isLoading.value = false
-                PortfolioUiState(
-                    isLoading = false,
-                    error = exception.message ?: "Unknown error",
-                    isRefreshing = isRefreshing,
-                    showBuyDialog = showBuyDialog,
-                    selectedCoinForBuy = selectedCoinForBuy,
-                    showBottomSheet = showBottomSheet,
-                    selectedTimeRange = selectedTimeRange
-                )
-            }
+        val portfolio = Portfolio(
+            balance = balance?.balance ?: Portfolio.INITIAL_BALANCE,
+            holdings = holdings,
+            transactions = emptyList()
         )
+
+        val uiState = PortfolioUiState(
+            isLoading = isLoading && portfolio.holdings.isEmpty(),
+            portfolio = portfolio,
+            error = error,
+            isRefreshing = isRefreshing,
+            showBuyDialog = showBuyDialog,
+            selectedCoinForBuy = selectedCoinForBuy,
+            showBottomSheet = showBottomSheet,
+            selectedTimeRange = selectedTimeRange
+        )
+
+        emit(uiState)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
@@ -112,29 +105,25 @@ class PortfolioViewModel @Inject constructor(
                 _showBuyDialog.value = false
                 _selectedCoinForBuy.value = null
             }
+
             is PortfolioUiEvent.ShowBuyDialog -> {
                 _selectedCoinForBuy.value = event.coinId
                 _showBuyDialog.value = true
             }
+
             is PortfolioUiEvent.BuyCoin -> buyCoin(
                 event.coinId,
                 event.quantity,
                 event.pricePerCoin
             )
+
             is PortfolioUiEvent.SellCoin -> sellCoin(
                 event.coinId,
                 event.quantity,
                 event.pricePerCoin
             )
-            PortfolioUiEvent.ResetPortfolio -> resetPortfolio()
-            is PortfolioUiEvent.SelectTimeRange -> {
-                _selectedTimeRange.value = event.timeRange
-            }
-            is PortfolioUiEvent.AddCoinForTest -> addCoinForTest(
-                event.coinId,
-                event.quantity,
-                event.pricePerCoin
-            )
+
+            is PortfolioUiEvent.SelectTimeRange -> TODO()
         }
     }
 
@@ -168,17 +157,15 @@ class PortfolioViewModel @Inject constructor(
     private fun buyCoin(coinId: String, quantity: Double, pricePerCoin: Double) {
         viewModelScope.launch {
             try {
-                val result = buyCoinUseCase(coinId, quantity, pricePerCoin)
-                result.fold(
-                    onSuccess = {
-                        _showBuyDialog.value = false
-                        _selectedCoinForBuy.value = null
-                        _error.value = null
-                    },
-                    onFailure = { exception ->
-                        _error.value = exception.message ?: "Failed to buy coin"
-                    }
-                )
+                val coin = selectedCoin.first()
+                if (coin != null) {
+                    buyCoinUseCase(coin, quantity)
+                    _showBuyDialog.value = false
+                    _selectedCoinForBuy.value = null
+                    _error.value = null
+                } else {
+                    _error.value = "Could not find coin to buy"
+                }
             } catch (e: Exception) {
                 _error.value = "Failed to buy coin: ${e.localizedMessage}"
             }
@@ -188,15 +175,8 @@ class PortfolioViewModel @Inject constructor(
     private fun sellCoin(coinId: String, quantity: Double, pricePerCoin: Double) {
         viewModelScope.launch {
             try {
-                val result = sellCoinUseCase(coinId, quantity, pricePerCoin)
-                result.fold(
-                    onSuccess = {
-                        _error.value = null
-                    },
-                    onFailure = { exception ->
-                        _error.value = exception.message ?: "Failed to sell coin"
-                    }
-                )
+                sellCoinUseCase(coinId, quantity, pricePerCoin)
+                _error.value = null
             } catch (e: Exception) {
                 _error.value = "Failed to sell coin: ${e.localizedMessage}"
             }
@@ -216,23 +196,5 @@ class PortfolioViewModel @Inject constructor(
 
     fun clearError() {
         _error.value = null
-    }
-
-    private fun addCoinForTest(coinId: String, quantity: Double, pricePerCoin: Double) {
-        viewModelScope.launch {
-            try {
-                val result = addCoinToHoldingForTestUseCase(coinId, quantity, pricePerCoin)
-                result.fold(
-                    onSuccess = {
-                        _error.value = null
-                    },
-                    onFailure = { exception ->
-                        _error.value = exception.message ?: "Failed to add coin for test"
-                    }
-                )
-            } catch (e: Exception) {
-                _error.value = "Failed to add coin for test: ${e.localizedMessage}"
-            }
-        }
     }
 }

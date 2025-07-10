@@ -29,11 +29,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -42,10 +45,13 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -64,6 +70,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -136,6 +143,27 @@ fun CoinListScreen(
                 showToolbarAndFab = !isScrollingDown
                 previousOffset = listState.firstVisibleItemScrollOffset
             }
+    }
+
+    var showBuyBottomSheet by remember { mutableStateOf(false) }
+    var selectedCoin by remember { mutableStateOf<Coin?>(null) }
+    val sheetState = rememberModalBottomSheetState()
+
+    if (showBuyBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBuyBottomSheet = false },
+            sheetState = sheetState
+        ) {
+            selectedCoin?.let { coin ->
+                BuyBottomSheet(
+                    coin = coin,
+                    onConfirm = { amount ->
+                        onEvent(CoinListUiEvent.BuyCoin(coin, amount))
+                        showBuyBottomSheet = false
+                    }
+                )
+            }
+        }
     }
 
     Scaffold(
@@ -336,9 +364,13 @@ fun CoinListScreen(
                                 item { Spacer(Modifier.height(40.dp)) }
                                 items(items = state.filteredCoins, key = { it.id }) { coin ->
                                     CoinItem(
-                                        coin = coin, 
+                                        coin = coin,
                                         onClick = { onCoinClick(coin.id) },
-                                        onToggleWatchlist = { onEvent(CoinListUiEvent.ToggleWatchlist(it)) }
+                                        onToggleWatchlist = { onEvent(CoinListUiEvent.ToggleWatchlist(it)) },
+                                        onBuyClick = {
+                                            selectedCoin = coin
+                                            showBuyBottomSheet = true
+                                        }
                                     )
                                 }
                             }
@@ -357,16 +389,17 @@ fun CoinListScreen(
 private fun CoinItem(
     coin: Coin,
     onClick: () -> Unit,
-    onToggleWatchlist: (Coin) -> Unit
+    onToggleWatchlist: (Coin) -> Unit,
+    onBuyClick: () -> Unit
 ) {
     val swipeableState = rememberSwipeableState(initialValue = 0)
-    val sizePx = with(LocalDensity.current) { 80.dp.toPx() }
+    val sizePx = with(LocalDensity.current) { 160.dp.toPx() } // Increased size for two icons
     val anchors = mapOf(0f to 0, -sizePx to 1) // 0 = closed, 1 = swiped
-    
+
     Box(
         modifier = Modifier.fillMaxWidth()
     ) {
-        // Background with star button (revealed when swiped)
+        // Background with star and buy buttons (revealed when swiped)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -386,8 +419,20 @@ private fun CoinItem(
                     modifier = Modifier.size(24.dp)
                 )
             }
+            IconButton(
+                onClick = onBuyClick,
+                modifier = Modifier
+                    .size(80.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ShoppingCart,
+                    contentDescription = "Buy Coin",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
-        
+
         // Main card content
         Card(
             onClick = onClick,
@@ -454,6 +499,35 @@ private fun CoinItem(
         }
     }
 }
+
+@Composable
+private fun BuyBottomSheet(
+    coin: Coin,
+    onConfirm: (Double) -> Unit
+) {
+    var amount by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = "Buy ${coin.name}", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(
+            value = amount,
+            onValueChange = { amount = it },
+            label = { Text("Amount") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = { onConfirm(amount.toDouble()) }) {
+            Text("Confirm Purchase")
+        }
+    }
+}
+
 
 @Composable
 private fun SortTypeChip(

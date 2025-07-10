@@ -30,7 +30,5 @@ sealed class PortfolioUiEvent {
         val quantity: Double,
         val pricePerCoin: Double
     ) : PortfolioUiEvent()
-    object ResetPortfolio : PortfolioUiEvent()
     data class SelectTimeRange(val timeRange: TimeRange) : PortfolioUiEvent()
-    data class AddCoinForTest(val coinId: String, val quantity: Double, val pricePerCoin: Double) : PortfolioUiEvent()
 }

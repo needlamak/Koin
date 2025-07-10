@@ -97,13 +97,9 @@ fun PortfolioScreen(
             sheetPeekHeight = 250.dp,
             topBar = {
                 PortfolioTopBar(
-                    onResetPortfolio = { onEvent(PortfolioUiEvent.ResetPortfolio) },
                     onAddFunds = { showAddFundsSheet = true },
                     onScanQr = { showScanQrSheet = true },
-                    onSendFunds = { showSendFundsSheet = true },
-                    onAddCoinForTest = { coinId, quantity, pricePerCoin ->
-                        onEvent(PortfolioUiEvent.AddCoinForTest(coinId, quantity, pricePerCoin))
-                    }
+                    onSendFunds = { showSendFundsSheet = true }
                 )
             }
         ) {
@@ -202,11 +198,9 @@ fun PortfolioScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PortfolioTopBar(
-    onResetPortfolio: () -> Unit,
     onAddFunds: () -> Unit,
     onScanQr: () -> Unit,
-    onSendFunds: () -> Unit,
-    onAddCoinForTest: (coinId: String, quantity: Double, pricePerCoin: Double) -> Unit
+    onSendFunds: () -> Unit
 ) {
     TopAppBar(
         modifier = Modifier.statusBarsPadding(),
@@ -283,29 +277,6 @@ private fun PortfolioTopBar(
                             },
                             leadingIcon = {
                                 Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Reset Portfolio") },
-                            onClick = {
-                                onResetPortfolio()
-                                showMenu = false
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.AccountBalanceWallet, contentDescription = null)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Add Coin for Test") },
-                            onClick = {
-                                onAddCoinForTest("bitcoin", 0.001, 30000.0)
-                                showMenu = false
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.TrendingUp,
-                                    contentDescription = null
-                                )
                             }
                         )
                     }
