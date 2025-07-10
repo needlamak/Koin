@@ -26,4 +26,6 @@ interface PortfolioRepository {
     suspend fun getBalance(): Double
     
     suspend fun resetPortfolio()
+
+    suspend fun addCoinToHoldingForTest(coinId: String, quantity: Double, pricePerCoin: Double): Result<Unit>
 }

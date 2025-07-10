@@ -1,7 +1,7 @@
 package com.koin.ui.portfolio
 
+import com.koin.data.coin.TimeRange
 import com.koin.domain.portfolio.Portfolio
-import com.koin.domain.portfolio.PortfolioHolding
 
 data class PortfolioUiState(
     val isLoading: Boolean = false,
@@ -32,21 +32,5 @@ sealed class PortfolioUiEvent {
     ) : PortfolioUiEvent()
     object ResetPortfolio : PortfolioUiEvent()
     data class SelectTimeRange(val timeRange: TimeRange) : PortfolioUiEvent()
+    data class AddCoinForTest(val coinId: String, val quantity: Double, val pricePerCoin: Double) : PortfolioUiEvent()
 }
-
-// Time range enum for chart selection
-enum class TimeRange {
-    DAY,
-    WEEK,
-    MONTH,
-    YEAR,
-    ALL
-}
-
-// States for buy dialog
-data class BuyDialogState(
-    val isLoading: Boolean = false,
-    val quantity: String = "",
-    val estimatedCost: Double = 0.0,
-    val error: String? = null
-)

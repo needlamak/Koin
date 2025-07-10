@@ -5,13 +5,11 @@ import com.koin.domain.coin.CoinRepository
 import com.koin.domain.model.Coin
 import com.koin.domain.portfolio.Portfolio
 import com.koin.domain.portfolio.PortfolioRepository
-import com.koin.domain.portfolio.TransactionType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -240,5 +238,13 @@ class PortfolioRepositoryImpl @Inject constructor(
             Log.e("PortfolioRepository", "Failed to get balance", e)
             Portfolio.INITIAL_BALANCE
         }
+    }
+
+    override suspend fun addCoinToHoldingForTest(
+        coinId: String,
+        quantity: Double,
+        pricePerCoin: Double
+    ): Result<Unit> {
+        return buyCoin(coinId, quantity, pricePerCoin, transactionFee = 0.0)
     }
 }

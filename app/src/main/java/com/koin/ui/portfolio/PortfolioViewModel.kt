@@ -2,6 +2,7 @@ package com.koin.ui.portfolio
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.koin.data.coin.TimeRange
 import com.koin.domain.coin.CoinRepository
 import com.koin.domain.portfolio.BuyCoinUseCase
 import com.koin.domain.portfolio.GetPortfolioUseCase
@@ -9,6 +10,7 @@ import com.koin.domain.portfolio.Portfolio
 import com.koin.domain.portfolio.RefreshPortfolioUseCase
 import com.koin.domain.portfolio.ResetPortfolioUseCase
 import com.koin.domain.portfolio.SellCoinUseCase
+import com.koin.domain.portfolio.AddCoinToHoldingForTestUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,6 +28,7 @@ class PortfolioViewModel @Inject constructor(
     private val sellCoinUseCase: SellCoinUseCase,
     private val refreshPortfolioUseCase: RefreshPortfolioUseCase,
     private val resetPortfolioUseCase: ResetPortfolioUseCase,
+    private val addCoinToHoldingForTestUseCase: AddCoinToHoldingForTestUseCase,
     coinRepository: CoinRepository
 ) : ViewModel() {
 
@@ -127,6 +130,11 @@ class PortfolioViewModel @Inject constructor(
             is PortfolioUiEvent.SelectTimeRange -> {
                 _selectedTimeRange.value = event.timeRange
             }
+            is PortfolioUiEvent.AddCoinForTest -> addCoinForTest(
+                event.coinId,
+                event.quantity,
+                event.pricePerCoin
+            )
         }
     }
 
@@ -208,5 +216,23 @@ class PortfolioViewModel @Inject constructor(
 
     fun clearError() {
         _error.value = null
+    }
+
+    private fun addCoinForTest(coinId: String, quantity: Double, pricePerCoin: Double) {
+        viewModelScope.launch {
+            try {
+                val result = addCoinToHoldingForTestUseCase(coinId, quantity, pricePerCoin)
+                result.fold(
+                    onSuccess = {
+                        _error.value = null
+                    },
+                    onFailure = { exception ->
+                        _error.value = exception.message ?: "Failed to add coin for test"
+                    }
+                )
+            } catch (e: Exception) {
+                _error.value = "Failed to add coin for test: ${e.localizedMessage}"
+            }
+        }
     }
 }

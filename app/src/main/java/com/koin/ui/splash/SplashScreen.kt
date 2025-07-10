@@ -28,7 +28,7 @@ fun SplashScreen(navController: NavController) {
     LaunchedEffect(isLoggedIn) {
         // Give the ViewModel a frame to emit.
         delay(150)
-        val target = if (isLoggedIn) "coin_list" else "auth"
+        val target = if (isLoggedIn) "portfolio" else "auth"
         navController.navigate(target) {
             popUpTo("splash") { inclusive = true }
         }

@@ -1,8 +1,6 @@
 package com.koin.ui.portfolio
 
-import android.app.Activity
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,21 +12,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,7 +43,6 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,11 +51,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowCompat
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.koin.components.BottomNavBar
@@ -89,16 +79,6 @@ fun PortfolioScreen(
     val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = bottomSheetState)
     val pullToRefreshState = rememberPullToRefreshState()
 
-    val view = LocalView.current
-    val darkTheme = isSystemInDarkTheme()
-    val bottomBarColor = MaterialTheme.colorScheme.surfaceContainer
-
-    SideEffect {
-        val window = (view.context as Activity).window
-        window.navigationBarColor = bottomBarColor.toArgb()
-        WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
-    }
-
     // Main Scaffold for bottom navigation
     Scaffold(
         bottomBar = {
@@ -111,8 +91,7 @@ fun PortfolioScreen(
             sheetContent = {
                 PortfolioHoldingsBottomSheet(
                     holdings = state.portfolio.holdings,
-                    onBuyCoin = { coinId -> onEvent(PortfolioUiEvent.ShowBuyDialog(coinId)) },
-                    onDismiss = { onEvent(PortfolioUiEvent.HideBottomSheet) }
+                    onBuyCoin = { coinId -> onEvent(PortfolioUiEvent.ShowBuyDialog(coinId)) }
                 )
             },
             sheetPeekHeight = 250.dp,
@@ -121,55 +100,37 @@ fun PortfolioScreen(
                     onResetPortfolio = { onEvent(PortfolioUiEvent.ResetPortfolio) },
                     onAddFunds = { showAddFundsSheet = true },
                     onScanQr = { showScanQrSheet = true },
-                    onSendFunds = { showSendFundsSheet = true }
+                    onSendFunds = { showSendFundsSheet = true },
+                    onAddCoinForTest = { coinId, quantity, pricePerCoin ->
+                        onEvent(PortfolioUiEvent.AddCoinForTest(coinId, quantity, pricePerCoin))
+                    }
                 )
-            },
-            modifier = Modifier.padding(padding)
-        ) { bottomSheetPadding ->
+            }
+        ) {
             PullToRefreshBox(
                 state = pullToRefreshState,
                 isRefreshing = state.isRefreshing,
                 onRefresh = { onEvent(PortfolioUiEvent.RefreshData) },
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottomSheetPadding)
+                    .padding(6.dp)
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     // Balance Header
                     BalanceHeader(
                         portfolio = state.portfolio,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
-
-                    // Chart section
-                    Box(
+                    PortfolioChart(
+                        portfolio = state.portfolio,
+                        selectedTimeRange = state.selectedTimeRange,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(280.dp)
-                            .padding(16.dp)
-                    ) {
-                        Column {
-                            // Portfolio Performance Chart
-                            PortfolioChart(
-                                portfolio = state.portfolio,
-                                selectedTimeRange = state.selectedTimeRange,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                            )
-
-                            Spacer(modifier = Modifier.height(20.dp))
-
-                            // Time range selector below chart
-                            TimeRangeSelector(
-                                selectedTimeRange = state.selectedTimeRange,
-                                onTimeRangeSelected = { onEvent(PortfolioUiEvent.SelectTimeRange(it)) },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
+                            .fillMaxWidth(),
+                        onEvent = onEvent
+                    )
+                    Spacer(modifier = Modifier.height(500.dp))
                 }
             }
         }
@@ -218,11 +179,13 @@ fun PortfolioScreen(
                 availableBalance = state.portfolio.balance,
                 onDismiss = { onEvent(PortfolioUiEvent.HideBuyDialog) },
                 onConfirm = { quantity, _ ->
-                    onEvent(PortfolioUiEvent.BuyCoin(
-                        coinId = selectedCoin.id,
-                        quantity = quantity,
-                        pricePerCoin = selectedCoin.currentPrice
-                    ))
+                    onEvent(
+                        PortfolioUiEvent.BuyCoin(
+                            coinId = selectedCoin.id,
+                            quantity = quantity,
+                            pricePerCoin = selectedCoin.currentPrice
+                        )
+                    )
                 }
             )
         }
@@ -242,7 +205,8 @@ private fun PortfolioTopBar(
     onResetPortfolio: () -> Unit,
     onAddFunds: () -> Unit,
     onScanQr: () -> Unit,
-    onSendFunds: () -> Unit
+    onSendFunds: () -> Unit,
+    onAddCoinForTest: (coinId: String, quantity: Double, pricePerCoin: Double) -> Unit
 ) {
     TopAppBar(
         modifier = Modifier.statusBarsPadding(),
@@ -318,7 +282,7 @@ private fun PortfolioTopBar(
                                 showMenu = false
                             },
                             leadingIcon = {
-                                Icon(Icons.Default.Send, contentDescription = null)
+                                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
                             }
                         )
                         DropdownMenuItem(
@@ -329,6 +293,19 @@ private fun PortfolioTopBar(
                             },
                             leadingIcon = {
                                 Icon(Icons.Default.AccountBalanceWallet, contentDescription = null)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Add Coin for Test") },
+                            onClick = {
+                                onAddCoinForTest("bitcoin", 0.001, 30000.0)
+                                showMenu = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.TrendingUp,
+                                    contentDescription = null
+                                )
                             }
                         )
                     }
@@ -347,17 +324,16 @@ private fun BalanceHeader(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        
+
         // Total balance
         Text(
             text = portfolio.formattedTotalPortfolioValue,
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold
         )
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         // Gain/Loss information
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -376,87 +352,15 @@ private fun BalanceHeader(
                 fontWeight = FontWeight.SemiBold
             )
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         // Available balance
         Text(
             text = "Available: ${portfolio.formattedBalance}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
-
-@Composable
-private fun PortfolioChart(
-    portfolio: Portfolio,
-    selectedTimeRange: TimeRange,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    Icons.Default.TrendingUp,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Portfolio Performance",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            // Portfolio Performance Chart
-            PortfolioPerformanceChart(
-                portfolio = portfolio,
-                selectedTimeRange = selectedTimeRange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun TimeRangeSelector(
-    selectedTimeRange: TimeRange,
-    onTimeRangeSelected: (TimeRange) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyRow(
-        modifier = modifier.padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        item {
-            TimeRange.values().forEach { range ->
-                val isSelected = range == selectedTimeRange
-                Button(
-                    onClick = { onTimeRangeSelected(range) },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSelected)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                ) {
-                    Text(range.name)
-                }
-            }
-        }
     }
 }
 

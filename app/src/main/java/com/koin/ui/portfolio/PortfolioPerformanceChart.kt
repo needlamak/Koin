@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.koin.data.coin.TimeRange
 import com.koin.domain.portfolio.Portfolio
 import java.text.NumberFormat
 import java.util.Locale
@@ -44,8 +45,10 @@ fun PortfolioPerformanceChart(
         generatePortfolioHistory(portfolio, selectedTimeRange)
     }
 
-    val maxValue = remember(portfolioHistory) { portfolioHistory.maxOrNull() ?: Portfolio.INITIAL_BALANCE }
-    val minValue = remember(portfolioHistory) { portfolioHistory.minOrNull() ?: Portfolio.INITIAL_BALANCE }
+    val maxValue =
+        remember(portfolioHistory) { portfolioHistory.maxOrNull() ?: Portfolio.INITIAL_BALANCE }
+    val minValue =
+        remember(portfolioHistory) { portfolioHistory.minOrNull() ?: Portfolio.INITIAL_BALANCE }
     val valueRange = remember(portfolioHistory) { maxValue - minValue }
 
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
@@ -300,25 +303,33 @@ fun PortfolioPerformanceChart(
 
         // Draw initial balance line for reference
         if (valueRange > 0) {
-            val initialBalanceY = height - ((Portfolio.INITIAL_BALANCE - minValue) / valueRange * height).toFloat()
+            val initialBalanceY =
+                height - ((Portfolio.INITIAL_BALANCE - minValue) / valueRange * height).toFloat()
             drawLine(
                 color = Color.Gray.copy(alpha = 0.5f),
                 start = Offset(0f, initialBalanceY),
                 end = Offset(width, initialBalanceY),
                 strokeWidth = 1.dp.toPx(),
-                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
+                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                    floatArrayOf(
+                        10f,
+                        10f
+                    )
+                )
             )
         }
     }
 }
+
 // Generate mock portfolio history based on current portfolio state and time range
 private fun generatePortfolioHistory(portfolio: Portfolio, timeRange: TimeRange): List<Double> {
     val dataPoints = when (timeRange) {
-        TimeRange.DAY -> 24
-        TimeRange.WEEK -> 7
-        TimeRange.MONTH -> 30
-        TimeRange.YEAR -> 365
+        TimeRange.ONE_DAY -> 24
+        TimeRange.ONE_WEEK -> 7
+        TimeRange.ONE_MONTH -> 30
+        TimeRange.ONE_YEAR -> 365
         TimeRange.ALL -> 100
+        TimeRange.ONE_HOUR -> TODO()
     }
 
     val currentValue = portfolio.totalPortfolioValue
@@ -334,10 +345,15 @@ private fun generatePortfolioHistory(portfolio: Portfolio, timeRange: TimeRange)
         val progress = index.toDouble() / (dataPoints - 1)
 
         // Add some realistic volatility using Random.nextDouble()
-        val volatility = kotlin.math.sin(progress * 20) * (currentValue * 0.05) * kotlin.random.Random.nextDouble(-1.0, 1.0)
+        val volatility =
+            kotlin.math.sin(progress * 20) * (currentValue * 0.05) * kotlin.random.Random.nextDouble(
+                -1.0,
+                1.0
+            )
 
         // Linear interpolation from initial balance to current value
-        val baseValue = Portfolio.INITIAL_BALANCE + (currentValue - Portfolio.INITIAL_BALANCE) * progress
+        val baseValue =
+            Portfolio.INITIAL_BALANCE + (currentValue - Portfolio.INITIAL_BALANCE) * progress
 
         // Add volatility but ensure end value matches current
         if (index == dataPoints - 1) {
