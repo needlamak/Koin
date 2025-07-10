@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,6 +19,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 @Composable
 fun BottomNavBar(navController: NavHostController) {
     val items = listOf(
+        NavItem("portfolio", Icons.Default.AccountBalanceWallet, "Portfolio"),
         NavItem("coin_list", Icons.Default.Home, "Coins"),
         NavItem("profile", Icons.Default.AccountCircle, "Profile")
     )
@@ -34,11 +36,11 @@ fun BottomNavBar(navController: NavHostController) {
                 onClick = {
                     if (!selected) {
                         navController.navigate(item.route) {
-                            // Pop up to the first bottom nav destination (coin_list)
+                            // Pop up to the first bottom nav destination (portfolio)
                             // This prevents multiple instances of bottom nav screens
-                            popUpTo("coin_list") {
+                            popUpTo("portfolio") {
                                 saveState = true
-                                inclusive = false // Keep coin_list as the base
+                                inclusive = false // Keep portfolio as the base
                             }
                             launchSingleTop = true
                             restoreState = true

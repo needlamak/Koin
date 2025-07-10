@@ -16,6 +16,8 @@ import com.koin.ui.coindetail.CoinDetailScreen
 import com.koin.ui.coindetail.CoinDetailViewModel
 import com.koin.ui.coinlist.CoinListScreen
 import com.koin.ui.coinlist.CoinListViewModel
+import com.koin.ui.portfolio.PortfolioScreen
+import com.koin.ui.portfolio.PortfolioViewModel
 import com.koin.ui.profile.ProfileScreen
 import com.koin.ui.profile.ProfileViewModel
 import com.koin.ui.splash.SplashScreen
@@ -77,12 +79,30 @@ fun NavGraph(
             AuthScreen(
                 viewModel = viewModel,
                 onRegistered = {
-                    navController.navigate(Screen.CoinList.route) {
+                    navController.navigate(Screen.Portfolio.route) {
                         launchSingleTop = true
-                        popUpTo(Screen.CoinList.route) { inclusive = false }
+                        popUpTo(Screen.Portfolio.route) { inclusive = false }
                         popUpTo(Screen.Auth.route) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        // Portfolio
+        composable(Screen.Portfolio.route) {
+            val viewModel: PortfolioViewModel = hiltViewModel()
+            val state by viewModel.uiState.collectAsState()
+            val selectedCoin by viewModel.selectedCoin.collectAsState()
+
+            LaunchedEffect(state.error) {
+                state.error?.let { showError(it) }
+            }
+
+            PortfolioScreen(
+                state = state,
+                onEvent = viewModel::onEvent,
+                selectedCoin = selectedCoin,
+                navController = navController
             )
         }
 

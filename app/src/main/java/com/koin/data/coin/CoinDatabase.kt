@@ -6,15 +6,26 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.koin.data.portfolio.PortfolioBalanceEntity
+import com.koin.data.portfolio.PortfolioDao
+import com.koin.data.portfolio.PortfolioHoldingEntity
+import com.koin.data.portfolio.PortfolioTransactionEntity
 
 @Database(
-    entities = [CoinEntity::class, CoinChartEntity::class],
-    version = 3,
+    entities = [
+        CoinEntity::class, 
+        CoinChartEntity::class,
+        PortfolioHoldingEntity::class,
+        PortfolioTransactionEntity::class,
+        PortfolioBalanceEntity::class
+    ],
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class CoinDatabase : RoomDatabase() {
     abstract fun coinDao(): CoinDao
+    abstract fun portfolioDao(): PortfolioDao
 
     companion object {
         @Volatile
@@ -27,7 +38,7 @@ abstract class CoinDatabase : RoomDatabase() {
                     CoinDatabase::class.java,
                     "coin_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
                 INSTANCE = instance
                 instance
@@ -73,6 +84,55 @@ abstract class CoinDatabase : RoomDatabase() {
                     )
                 """)
                 database.execSQL("CREATE INDEX IF NOT EXISTS `index_coin_chart_coinId_timeRange` ON `coin_chart` (`coinId`, `timeRange`)")
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create portfolio holdings table
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `portfolio_holdings` (
+                        `coinId` TEXT NOT NULL,
+                        `coinName` TEXT NOT NULL,
+                        `coinSymbol` TEXT NOT NULL,
+                        `coinImageUrl` TEXT NOT NULL,
+                        `quantity` REAL NOT NULL,
+                        `averagePurchasePrice` REAL NOT NULL,
+                        `totalTransactionFees` REAL NOT NULL,
+                        `lastUpdated` INTEGER NOT NULL,
+                        PRIMARY KEY(`coinId`)
+                    )
+                """)
+                
+                // Create portfolio transactions table
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `portfolio_transactions` (
+                        `id` TEXT NOT NULL,
+                        `coinId` TEXT NOT NULL,
+                        `type` TEXT NOT NULL,
+                        `quantity` REAL NOT NULL,
+                        `pricePerCoin` REAL NOT NULL,
+                        `transactionFee` REAL NOT NULL,
+                        `timestamp` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                """)
+                
+                // Create portfolio balance table
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `portfolio_balance` (
+                        `id` INTEGER NOT NULL,
+                        `balance` REAL NOT NULL,
+                        `lastUpdated` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                """)
+                
+                // Initialize balance with $10,000
+                database.execSQL("""
+                    INSERT INTO `portfolio_balance` (id, balance, lastUpdated)
+                    VALUES (1, 10000.0, ${System.currentTimeMillis()})
+                """)
             }
         }
     }
