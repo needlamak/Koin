@@ -10,6 +10,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -31,12 +33,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
@@ -59,10 +63,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import androidx.wear.compose.material.ExperimentalWearMaterialApi
+import androidx.wear.compose.material.FractionalThreshold
+import androidx.wear.compose.material.rememberSwipeableState
+import androidx.wear.compose.material.swipeable
 import coil.compose.AsyncImage
 import com.koin.components.BottomNavBar
 import com.koin.domain.model.Coin
@@ -70,6 +80,7 @@ import com.koin.util.NetworkMonitor
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -324,7 +335,11 @@ fun CoinListScreen(
                             ) {
                                 item { Spacer(Modifier.height(40.dp)) }
                                 items(items = state.filteredCoins, key = { it.id }) { coin ->
-                                    CoinItem(coin = coin, onClick = { onCoinClick(coin.id) })
+                                    CoinItem(
+                                        coin = coin, 
+                                        onClick = { onCoinClick(coin.id) },
+                                        onToggleWatchlist = { onEvent(CoinListUiEvent.ToggleWatchlist(it)) }
+                                    )
                                 }
                             }
                         }
@@ -337,64 +352,104 @@ fun CoinListScreen(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalWearMaterialApi::class)
 @Composable
 private fun CoinItem(
     coin: Coin,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onToggleWatchlist: (Coin) -> Unit
 ) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
+    val swipeableState = rememberSwipeableState(initialValue = 0)
+    val sizePx = with(LocalDensity.current) { 80.dp.toPx() }
+    val anchors = mapOf(0f to 0, -sizePx to 1) // 0 = closed, 1 = swiped
+    
+    Box(
+        modifier = Modifier.fillMaxWidth()
     ) {
+        // Background with star button (revealed when swiped)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .height(72.dp),
+            horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Coin icon
-            AsyncImage(
-                model = coin.imageUrl,
-                contentDescription = "${coin.name} logo",
+            IconButton(
+                onClick = { onToggleWatchlist(coin) },
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-            )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Coin info
-            Column(
-                modifier = Modifier.weight(1f)
+                    .size(80.dp)
             ) {
-                Text(
-                    text = coin.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = coin.symbol.uppercase(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                Icon(
+                    imageVector = Icons.Outlined.StarBorder,
+                    contentDescription = "Add to watchlist",
+                    tint = Color(0xFFFFD700),
+                    modifier = Modifier.size(24.dp)
                 )
             }
-
-            // Price info
-            Column(
-                horizontalAlignment = Alignment.End
+        }
+        
+        // Main card content
+        Card(
+            onClick = onClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(swipeableState.offset.value.roundToInt(), 0) }
+                .swipeable(
+                    state = swipeableState,
+                    anchors = anchors,
+                    thresholds = { _, _ -> FractionalThreshold(0.3f) },
+                    orientation = Orientation.Horizontal
+                ),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = coin.formattedPrice,
-                    style = MaterialTheme.typography.titleMedium
+                // Coin icon
+                AsyncImage(
+                    model = coin.imageUrl,
+                    contentDescription = "${coin.name} logo",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
                 )
-                Text(
-                    text = coin.formattedPriceChange,
-                    color = if (coin.isPositive24h) Color.Green else Color.Red,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // Coin info
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = coin.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = coin.symbol.uppercase(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Price info
+                Column(
+                    horizontalAlignment = Alignment.End
+                ) {
+                    Text(
+                        text = coin.formattedPrice,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = coin.formattedPriceChange,
+                        color = if (coin.isPositive24h) Color.Green else Color.Red,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
         }
     }

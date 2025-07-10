@@ -6,11 +6,15 @@ import com.koin.data.coin.TimeRange
 import com.koin.data.coin.dto.PriceDataPoint
 import com.koin.domain.model.Coin
 import com.koin.domain.coin.CoinRepository
+import com.koin.domain.user.UserRepository
+import com.koin.domain.watchlist.WatchlistItem
+import com.koin.domain.watchlist.WatchlistRepository
 import com.koin.ui.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -18,11 +22,15 @@ import javax.inject.Inject
 sealed class CoinDetailUiEvent {
     object Refresh : CoinDetailUiEvent()
     data class TimeRangeSelected(val timeRange: TimeRange) : CoinDetailUiEvent()
+    object ToggleWatchlist : CoinDetailUiEvent()
+    object ClearToast : CoinDetailUiEvent()
 }
 
 @HiltViewModel
 class CoinDetailViewModel @Inject constructor(
     private val repository: CoinRepository,
+    private val userRepository: UserRepository,
+    private val watchlistRepository: WatchlistRepository,
     savedStateHandle: SavedStateHandle
 ) : BaseViewModel<CoinDetailUiState, CoinDetailUiEvent>() {
 
@@ -36,6 +44,7 @@ class CoinDetailViewModel @Inject constructor(
         // but rather isLoading. isRefreshing is specifically for pull-to-refresh.
         loadCoin(isRefresh = false)
         loadHistoricalData(isRefresh = false)
+        observeWatchlistStatus()
     }
 
     override fun handleEvent(event: CoinDetailUiEvent) {
@@ -49,6 +58,12 @@ class CoinDetailViewModel @Inject constructor(
             is CoinDetailUiEvent.TimeRangeSelected -> {
                 _uiState.update { it.copy(selectedTimeRange = event.timeRange) }
                 loadHistoricalData(isRefresh = false) // Time range change is not a "refresh"
+            }
+            is CoinDetailUiEvent.ToggleWatchlist -> {
+                toggleWatchlist()
+            }
+            is CoinDetailUiEvent.ClearToast -> {
+                _uiState.update { it.copy(toastMessage = null) }
             }
         }
     }
@@ -131,6 +146,48 @@ class CoinDetailViewModel @Inject constructor(
             }
         }
     }
+    
+    private fun observeWatchlistStatus() {
+        viewModelScope.launch {
+            // Get the first user (assuming single user app for now)
+            userRepository.users().collectLatest { users ->
+                if (users.isNotEmpty()) {
+                    val user = users.first()
+                    watchlistRepository.isInWatchlist(user.id, coinId).collectLatest { isInWatchlist ->
+                        _uiState.update { it.copy(isInWatchlist = isInWatchlist, currentUserId = user.id) }
+                    }
+                }
+            }
+        }
+    }
+    
+    private fun toggleWatchlist() {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            val userId = currentState.currentUserId ?: return@launch
+            val coin = currentState.coin ?: return@launch
+            
+            try {
+                if (currentState.isInWatchlist) {
+                    watchlistRepository.removeFromWatchlist(userId, coinId)
+                    _uiState.update { it.copy(toastMessage = "${coin.name} removed from watchlist") }
+                } else {
+                    val watchlistItem = WatchlistItem(
+                        userId = userId,
+                        coinId = coin.id,
+                        coinName = coin.name,
+                        coinSymbol = coin.symbol,
+                        coinImageUrl = coin.imageUrl,
+                        addedAt = System.currentTimeMillis()
+                    )
+                    watchlistRepository.addToWatchlist(watchlistItem)
+                    _uiState.update { it.copy(toastMessage = "${coin.name} added to watchlist") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to update watchlist: ${e.message}") }
+            }
+        }
+    }
 }
 
 data class CoinDetailUiState(
@@ -141,7 +198,10 @@ data class CoinDetailUiState(
     val isLoadingHistoricalData: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val selectedTimeRange: TimeRange = TimeRange.ONE_DAY
+    val selectedTimeRange: TimeRange = TimeRange.ONE_DAY,
+    val isInWatchlist: Boolean = false,
+    val currentUserId: Long? = null,
+    val toastMessage: String? = null
 )
 
 //@HiltViewModel

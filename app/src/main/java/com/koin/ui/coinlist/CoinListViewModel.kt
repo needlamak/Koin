@@ -3,6 +3,9 @@ package com.koin.ui.coinlist
 import androidx.lifecycle.viewModelScope
 import com.koin.domain.model.Coin
 import com.koin.domain.coin.CoinRepository
+import com.koin.domain.user.UserRepository
+import com.koin.domain.watchlist.WatchlistItem
+import com.koin.domain.watchlist.WatchlistRepository
 import com.koin.ui.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +17,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CoinListViewModel @Inject constructor(
-    private val repository: CoinRepository
+    private val repository: CoinRepository,
+    private val userRepository: UserRepository,
+    private val watchlistRepository: WatchlistRepository
 ) : BaseViewModel<CoinListUiState, CoinListUiEvent>() {
 
     override val _uiState: MutableStateFlow<CoinListUiState> = MutableStateFlow(CoinListUiState())
@@ -30,6 +35,7 @@ class CoinListViewModel @Inject constructor(
             is CoinListUiEvent.OnCoinClick -> { /* Handle navigation to detail */ }
             is CoinListUiEvent.ResetFilters -> resetAllFilters() // For resetting all active filters
             is CoinListUiEvent.ResetSearch -> resetSearchQuery() // For clearing just the search query
+            is CoinListUiEvent.ToggleWatchlist -> toggleWatchlist(event.coin)
         }
     }
 
@@ -109,6 +115,25 @@ class CoinListViewModel @Inject constructor(
             )
         }
     }
+    
+    private fun toggleWatchlist(coin: Coin) {
+        viewModelScope.launch {
+            try {
+                val userId = 1L // Assume single user for now
+                val watchlistItem = WatchlistItem(
+                    userId = userId,
+                    coinId = coin.id,
+                    coinName = coin.name,
+                    coinSymbol = coin.symbol,
+                    coinImageUrl = coin.imageUrl,
+                    addedAt = System.currentTimeMillis()
+                )
+                watchlistRepository.addToWatchlist(watchlistItem)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to update watchlist: ${e.message}") }
+            }
+        }
+    }
 }
 
 data class CoinListUiState(
@@ -126,6 +151,7 @@ sealed class CoinListUiEvent {
     data class OnCoinClick(val coinId: String) : CoinListUiEvent()
     object ResetFilters : CoinListUiEvent() // Event for resetting all filters
     object ResetSearch : CoinListUiEvent() // Event for resetting just the search query
+    data class ToggleWatchlist(val coin: Coin) : CoinListUiEvent()
 }
 
 

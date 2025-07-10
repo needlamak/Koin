@@ -27,6 +27,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,8 +43,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import android.widget.Toast
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -67,6 +74,16 @@ fun CoinDetailScreen(
     val coin = state.coin
     val selectedTimeRange = state.selectedTimeRange
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
+    val hapticFeedback = LocalHapticFeedback.current
+
+    // Handle toast messages
+    LaunchedEffect(state.toastMessage) {
+        state.toastMessage?.let { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            onEvent(CoinDetailUiEvent.ClearToast)
+        }
+    }
 
     // Calculate scroll progress for animations
     val scrollProgress = (scrollState.value / 500f).coerceIn(0f, 1f)
@@ -129,6 +146,33 @@ fun CoinDetailScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
+                        )
+                    }
+                },
+                actions = {
+                    // Star button for watchlist
+                    IconButton(
+                        onClick = { 
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onEvent(CoinDetailUiEvent.ToggleWatchlist) 
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (state.isInWatchlist) {
+                                Icons.Filled.Star
+                            } else {
+                                Icons.Outlined.StarBorder
+                            },
+                            contentDescription = if (state.isInWatchlist) {
+                                "Remove from watchlist"
+                            } else {
+                                "Add to watchlist"
+                            },
+                            tint = if (state.isInWatchlist) {
+                                Color(0xFFFFD700) // Gold color for filled star
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            }
                         )
                     }
                 })

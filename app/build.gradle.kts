@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.koin"
-        minSdk = 24
+        minSdk = 25
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -71,6 +71,7 @@ dependencies {
 
     // WorkManager with Coroutines
     implementation(libs.androidx.hilt.work)
+    implementation(libs.androidx.compose.material)
     ksp(libs.hilt.compiler) // Use hilt-compiler, not androidx.hilt.compiler
     implementation(libs.androidx.work.runtime.ktx)
 

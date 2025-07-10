@@ -4,6 +4,8 @@ import androidx.lifecycle.viewModelScope
 import com.koin.data.session.SessionManager
 import com.koin.domain.user.User
 import com.koin.domain.user.UserRepository
+import com.koin.domain.watchlist.WatchlistItem
+import com.koin.domain.watchlist.WatchlistRepository
 import com.koin.ui.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -18,6 +20,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val repository: UserRepository,
+    private val watchlistRepository: WatchlistRepository,
     private val sessionManager: SessionManager
 ) : BaseViewModel<ProfileUiState, ProfileUiEvent>() {
 
@@ -25,6 +28,7 @@ class ProfileViewModel @Inject constructor(
 
     init {
         loadUser()
+        loadWatchlist()
     }
 
     private fun loadUser() {
@@ -40,10 +44,26 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    private fun loadWatchlist() {
+        viewModelScope.launch {
+            watchlistRepository.getWatchlistForUser(1L) // Assume single user with id = 1
+                .catch { e ->
+                    _uiState.update { it.copy(error = e.message) }
+                }
+                .collectLatest { watchlist ->
+                    _uiState.update { it.copy(watchlist = watchlist) }
+                }
+        }
+    }
+
     override fun handleEvent(event: ProfileUiEvent) {
         when (event) {
             is ProfileUiEvent.Save -> save(event.name, event.email, event.bio, event.avatarUri)
-            ProfileUiEvent.Refresh -> loadUser()
+            ProfileUiEvent.Refresh -> {
+                loadUser()
+                loadWatchlist()
+            }
+            is ProfileUiEvent.RemoveFromWatchlist -> removeFromWatchlist(event.coinId)
         }
     }
 
@@ -60,6 +80,16 @@ class ProfileViewModel @Inject constructor(
                 repository.upsert(user)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
+    private fun removeFromWatchlist(coinId: String) {
+        viewModelScope.launch {
+            try {
+                watchlistRepository.removeFromWatchlist(1L, coinId) // Assume single user with id = 1
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to remove from watchlist: ${e.message}") }
             }
         }
     }
@@ -89,6 +119,7 @@ class ProfileViewModel @Inject constructor(
 
 data class ProfileUiState(
     val user: User? = null,
+    val watchlist: List<WatchlistItem> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null,
     val loggedOut: Boolean = false
@@ -104,4 +135,5 @@ sealed class ProfileUiEvent {
     ) : ProfileUiEvent()
 
     object Refresh : ProfileUiEvent()
+    data class RemoveFromWatchlist(val coinId: String) : ProfileUiEvent()
 }

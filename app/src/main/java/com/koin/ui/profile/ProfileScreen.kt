@@ -1,6 +1,7 @@
 package com.koin.ui.profile
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,14 +17,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
@@ -58,6 +63,9 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.koin.components.BottomNavBar
 import com.koin.domain.user.User
+import com.koin.domain.watchlist.WatchlistItem
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
 fun ProfileScreen(
@@ -207,7 +215,13 @@ private fun ProfileContentWithMenu(
                 modifier = Modifier.weight(1f)
             ) { page ->
                 when (page) {
-                    0 -> WatchlistTab()
+                    0 -> WatchlistTab(
+                        state = viewModel.uiState.collectAsState().value, 
+                        onEvent = viewModel::onEvent,
+                        onCoinClick = { coinId ->
+                            navController.navigate("coin_detail/$coinId")
+                        }
+                    )
                     1 -> EditProfileTab(user, onSave)
                 }
             }
@@ -217,17 +231,116 @@ private fun ProfileContentWithMenu(
 
 
 @Composable
-private fun WatchlistTab() {
+private fun WatchlistTab(
+    state: ProfileUiState,
+    onEvent: (ProfileUiEvent) -> Unit,
+    onCoinClick: (String) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Your Watchlist", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(16.dp))
-        // Add watchlist content here
+        Text(
+            "Your Watchlist", 
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        
+        if (state.watchlist.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "No coins in watchlist",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Add coins to your watchlist from the detail screen",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(state.watchlist) { item ->
+                    WatchlistItemCard(
+                        item = item,
+                        onClick = { onCoinClick(item.coinId) },
+                        onRemove = { onEvent(ProfileUiEvent.RemoveFromWatchlist(item.coinId)) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WatchlistItemCard(
+    item: WatchlistItem,
+    onClick: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Coin icon
+            AsyncImage(
+                model = item.coinImageUrl,
+                contentDescription = "${item.coinName} logo",
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Coin info
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = item.coinName,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = item.coinSymbol.uppercase(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Remove button
+            IconButton(
+                onClick = onRemove
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Remove from watchlist",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
     }
 }
 
