@@ -1,5 +1,6 @@
 package com.koin.data.portfolio
 
+import com.koin.domain.model.Coin
 import com.koin.domain.portfolio.PortfolioBalance
 import com.koin.domain.portfolio.PortfolioHolding
 import com.koin.domain.portfolio.PortfolioRepository
@@ -27,7 +28,7 @@ class PortfolioRepositoryImpl @Inject constructor(
         return portfolioDao.getBalance().map { it?.toDomain() }
     }
 
-    override suspend fun buyCoin(coin: com.koin.domain.model.Coin, amount: Double) {
+    override suspend fun buyCoin(coin: Coin, amount: Double) {
         val holding = portfolioDao.getHolding(coin.id)
         val price = coin.currentPrice
         val fee = 0.01 * amount * price // 1% fee

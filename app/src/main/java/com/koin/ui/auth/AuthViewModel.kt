@@ -1,15 +1,12 @@
 package com.koin.ui.auth
 
-import androidx.lifecycle.viewModelScope
 import com.koin.data.session.SessionManager
 import com.koin.domain.user.User
 import com.koin.domain.user.UserRepository
 import com.koin.ui.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel

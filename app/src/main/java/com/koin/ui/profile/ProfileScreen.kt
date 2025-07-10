@@ -1,6 +1,6 @@
 package com.koin.ui.profile
 
-import androidx.compose.foundation.clickable
+import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,14 +29,11 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -64,8 +61,8 @@ import coil.compose.AsyncImage
 import com.koin.components.BottomNavBar
 import com.koin.domain.user.User
 import com.koin.domain.watchlist.WatchlistItem
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import com.koin.ui.base.BaseViewModel
 
 @Composable
 fun ProfileScreen(
@@ -353,7 +350,7 @@ private fun EditProfileTab(
     var name by remember { mutableStateOf(user.name) }
     var email by remember { mutableStateOf(user.email) }
     var bio by remember { mutableStateOf(user.bio ?: "") }
-    val emailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    val emailValid = Patterns.EMAIL_ADDRESS.matcher(email).matches()
 
     Column(
         modifier = Modifier

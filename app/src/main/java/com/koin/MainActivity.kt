@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
+import com.koin.navigation.NavGraph
 import com.koin.ui.session.SessionViewModel
 import com.koin.ui.theme.KoinTheme
 import com.koin.util.NetworkMonitor
@@ -126,7 +127,7 @@ fun KoinApp() {
             snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { innerPadding ->
             val paddingValues = innerPadding
-            com.koin.navigation.NavGraph(
+            NavGraph(
                 navController = navController,
                 modifier = Modifier.padding(),
                 showError = ::showError

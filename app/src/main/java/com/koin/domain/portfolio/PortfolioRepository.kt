@@ -1,5 +1,6 @@
 package com.koin.domain.portfolio
 
+import com.koin.domain.model.Coin
 import kotlinx.coroutines.flow.Flow
 
 data class PortfolioBalance(
@@ -21,9 +22,10 @@ interface PortfolioRepository {
     fun getHoldings(): Flow<List<PortfolioHolding>>
     fun getTransactionsForCoin(coinId: String): Flow<List<PortfolioTransaction>>
     fun getBalance(): Flow<PortfolioBalance?>
-    suspend fun buyCoin(coin: com.koin.domain.model.Coin, amount: Double)
+    suspend fun buyCoin(coin: Coin, amount: Double)
     suspend fun sellCoin(coinId: String, quantity: Double, pricePerCoin: Double)
     suspend fun refreshPortfolio()
     suspend fun getTransactionHistory(): List<Transaction>
     suspend fun resetPortfolio()
+//    fun getPortfolioHoldingById(coinId: String): Flow<PortfolioHolding?>
 }

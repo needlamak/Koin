@@ -24,9 +24,9 @@ object DatabaseModule {
             "coin_database"
         )
         .addMigrations(
-            CoinDatabase.MIGRATION_1_2, 
-            CoinDatabase.MIGRATION_2_3, 
-            CoinDatabase.MIGRATION_3_4
+            CoinDatabase.Companion.MIGRATION_1_2,
+            CoinDatabase.Companion.MIGRATION_2_3,
+            CoinDatabase.Companion.MIGRATION_3_4
         )
         .build()
     }

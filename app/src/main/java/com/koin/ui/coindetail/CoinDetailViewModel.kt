@@ -4,8 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.koin.data.coin.TimeRange
 import com.koin.data.coin.dto.PriceDataPoint
-import com.koin.domain.model.Coin
 import com.koin.domain.coin.CoinRepository
+import com.koin.domain.model.Coin
 import com.koin.domain.user.UserRepository
 import com.koin.domain.watchlist.WatchlistItem
 import com.koin.domain.watchlist.WatchlistRepository
@@ -14,7 +14,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject

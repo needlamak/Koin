@@ -1,12 +1,13 @@
 package com.koin.ui.coinlist
 
 import androidx.lifecycle.viewModelScope
-import com.koin.domain.model.Coin
+import com.koin.data.coin.CoinRepositoryImpl
 import com.koin.domain.coin.CoinRepository
+import com.koin.domain.model.Coin
+import com.koin.domain.portfolio.PortfolioRepository
 import com.koin.domain.user.UserRepository
 import com.koin.domain.watchlist.WatchlistItem
 import com.koin.domain.watchlist.WatchlistRepository
-import com.koin.domain.portfolio.PortfolioRepository
 import com.koin.ui.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,7 +71,7 @@ class CoinListViewModel @Inject constructor(
         _uiState.update { it.copy(isRefreshing = true) }
         viewModelScope.launch {
             try {
-                (repository as? com.koin.data.coin.CoinRepositoryImpl)?.refreshFromNetwork()
+                (repository as? CoinRepositoryImpl)?.refreshFromNetwork()
                 _uiState.update { it.copy(isRefreshing = false) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isRefreshing = false) }

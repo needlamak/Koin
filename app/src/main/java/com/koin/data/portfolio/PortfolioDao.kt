@@ -2,6 +2,7 @@ package com.koin.data.portfolio
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
@@ -12,7 +13,7 @@ interface PortfolioDao {
     @Query("SELECT * FROM portfolio_holdings")
     fun getHoldings(): Flow<List<PortfolioHoldingEntity>>
 
-    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHolding(holding: PortfolioHoldingEntity)
 
     @Update

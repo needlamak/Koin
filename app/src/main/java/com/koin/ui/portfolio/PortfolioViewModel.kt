@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.koin.data.coin.TimeRange
 import com.koin.domain.coin.CoinRepository
 import com.koin.domain.portfolio.BuyCoinUseCase
+import com.koin.domain.portfolio.GetBalanceUseCase
 import com.koin.domain.portfolio.GetPortfolioUseCase
 import com.koin.domain.portfolio.Portfolio
 import com.koin.domain.portfolio.PortfolioBalance
@@ -33,7 +34,7 @@ class PortfolioViewModel @Inject constructor(
     private val sellCoinUseCase: SellCoinUseCase,
     private val refreshPortfolioUseCase: RefreshPortfolioUseCase,
     private val resetPortfolioUseCase: ResetPortfolioUseCase,
-    private val getBalanceUseCase: com.koin.domain.portfolio.GetBalanceUseCase,
+    private val getBalanceUseCase: GetBalanceUseCase,
     coinRepository: CoinRepository
 ) : ViewModel() {
 
@@ -73,7 +74,7 @@ class PortfolioViewModel @Inject constructor(
         val selectedTimeRange = flows[8] as TimeRange
 
         val portfolio = Portfolio(
-            balance = balance?.balance ?: Portfolio.INITIAL_BALANCE,
+            balance = balance?.balance ?: Portfolio.Companion.INITIAL_BALANCE,
             holdings = holdings,
             transactions = emptyList()
         )

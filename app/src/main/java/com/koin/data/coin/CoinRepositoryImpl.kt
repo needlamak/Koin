@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.collections.get
 
 @Singleton
 class CoinRepositoryImpl @Inject constructor(

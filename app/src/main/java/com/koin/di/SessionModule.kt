@@ -1,6 +1,5 @@
 package com.koin.di
 
-import com.koin.data.session.SessionManager
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent

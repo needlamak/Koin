@@ -1,5 +1,6 @@
 package com.koin.domain.portfolio
 
+import com.koin.domain.model.Coin
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,7 +17,7 @@ class BuyCoinUseCase @Inject constructor(
     private val repository: PortfolioRepository
 ) {
     suspend operator fun invoke(
-        coin: com.koin.domain.model.Coin,
+        coin: Coin,
         amount: Double
     ): Unit = repository.buyCoin(coin, amount)
 }

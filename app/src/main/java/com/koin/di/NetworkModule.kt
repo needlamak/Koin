@@ -1,6 +1,5 @@
 package com.koin.di
 
-import android.content.Context
 import com.google.gson.Gson
 import com.koin.data.coin.CoinGeckoApiService
 import dagger.Module

@@ -18,6 +18,8 @@ import com.koin.ui.coinlist.CoinListScreen
 import com.koin.ui.coinlist.CoinListViewModel
 import com.koin.ui.portfolio.PortfolioScreen
 import com.koin.ui.portfolio.PortfolioViewModel
+import com.koin.ui.portfoliodetail.PortfolioDetailScreen
+import com.koin.ui.portfoliodetail.PortfolioDetailViewModel
 import com.koin.ui.profile.ProfileScreen
 import com.koin.ui.profile.ProfileViewModel
 import com.koin.ui.splash.SplashScreen
@@ -102,7 +104,26 @@ fun NavGraph(
                 state = state,
                 onEvent = viewModel::onEvent,
                 selectedCoin = selectedCoin,
-                navController = navController
+                navController = navController,
+                onPortfolioCoinClick = { coinId ->
+                    navController.navigate(Screen.PortfolioCoinDetail.createRoute(coinId))
+                }
+            )
+        }
+
+        // Portfolio Coin Detail
+        composable(Screen.PortfolioCoinDetail.route) {
+            val viewModel: PortfolioDetailViewModel = hiltViewModel()
+            val state by viewModel.uiState.collectAsState()
+
+            LaunchedEffect(state.error) {
+                state.error?.let { showError(it) }
+            }
+
+            PortfolioDetailScreen(
+                state = state,
+                onEvent = viewModel::onEvent,
+                onBackClick = { navController.popBackStack() }
             )
         }
 

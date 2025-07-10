@@ -1,5 +1,6 @@
 package com.koin.ui.auth
 
+import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -34,7 +35,7 @@ fun AuthScreen(viewModel: AuthViewModel, onRegistered: () -> Unit) {
 
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    val emailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    val emailValid = Patterns.EMAIL_ADDRESS.matcher(email).matches()
     var bio by remember { mutableStateOf("") }
 
     Column(

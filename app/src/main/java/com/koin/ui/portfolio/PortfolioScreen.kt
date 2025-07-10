@@ -16,7 +16,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
@@ -56,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.koin.components.BottomNavBar
+import com.koin.domain.model.Coin
 import com.koin.domain.portfolio.Portfolio
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,8 +63,9 @@ import com.koin.domain.portfolio.Portfolio
 fun PortfolioScreen(
     state: PortfolioUiState,
     onEvent: (PortfolioUiEvent) -> Unit,
-    selectedCoin: com.koin.domain.model.Coin?,
+    selectedCoin: Coin?,
     navController: NavController,
+    onPortfolioCoinClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -91,7 +92,8 @@ fun PortfolioScreen(
             sheetContent = {
                 PortfolioHoldingsBottomSheet(
                     holdings = state.portfolio.holdings,
-                    onBuyCoin = { coinId -> onEvent(PortfolioUiEvent.ShowBuyDialog(coinId)) }
+                    onBuyCoin = { coinId -> onEvent(PortfolioUiEvent.ShowBuyDialog(coinId)) },
+                    onPortfolioCoinClick = onPortfolioCoinClick
                 )
             },
             sheetPeekHeight = 250.dp,

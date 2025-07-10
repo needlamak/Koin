@@ -5,7 +5,7 @@ import com.koin.domain.portfolio.Portfolio
 
 data class PortfolioUiState(
     val isLoading: Boolean = false,
-    val portfolio: Portfolio = Portfolio.empty(),
+    val portfolio: Portfolio = Portfolio.Companion.empty(),
     val error: String? = null,
     val isRefreshing: Boolean = false,
     val showBuyDialog: Boolean = false,
