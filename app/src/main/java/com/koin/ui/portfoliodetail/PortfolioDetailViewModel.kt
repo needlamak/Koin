@@ -2,7 +2,6 @@ package com.koin.ui.portfoliodetail
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.koin.data.coin.TimeRange
 import com.koin.domain.coin.CoinRepository
 import com.koin.domain.portfolio.PortfolioRepository
 import com.koin.ui.base.BaseViewModel
@@ -27,8 +26,8 @@ class PortfolioDetailViewModel @Inject constructor(
         MutableStateFlow(PortfolioDetailUiState(isLoading = true))
 
     init {
-        loadPortfolioCoin()
         loadHistoricalData()
+        loadPortfolioCoin()
     }
 
     override fun handleEvent(event: PortfolioDetailUiEvent) {

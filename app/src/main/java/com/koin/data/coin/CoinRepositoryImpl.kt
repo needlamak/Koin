@@ -18,7 +18,6 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.collections.get
 
 @Singleton
 class CoinRepositoryImpl @Inject constructor(
@@ -67,10 +66,10 @@ class CoinRepositoryImpl @Inject constructor(
             coinDao.deleteAllCoins()
             coinDao.insertAll(domainCoins.map { it.toEntity() })
 
-            // Prefetch chart data for all coins and all time ranges
-            val allTimeRanges = TimeRange.entries.toTypedArray()
+            // Prefetch chart data for all coins and selected time ranges
+            val selectedTimeRanges = listOf(TimeRange.ONE_DAY, TimeRange.ONE_WEEK, TimeRange.ONE_YEAR, TimeRange.ALL)
             domainCoins.forEach { coin ->
-                allTimeRanges.forEach { range ->
+                selectedTimeRanges.forEach { range ->
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
                             getCoinMarketChart(coin.id, range, "usd")

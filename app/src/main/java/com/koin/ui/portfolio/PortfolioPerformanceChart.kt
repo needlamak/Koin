@@ -326,10 +326,8 @@ private fun generatePortfolioHistory(portfolio: Portfolio, timeRange: TimeRange)
     val dataPoints = when (timeRange) {
         TimeRange.ONE_DAY -> 24
         TimeRange.ONE_WEEK -> 7
-        TimeRange.ONE_MONTH -> 30
         TimeRange.ONE_YEAR -> 365
-        TimeRange.ALL -> 100
-        TimeRange.ONE_HOUR -> TODO()
+        TimeRange.ALL -> 365 // Using 365 data points for 'ALL' for consistency with 1Y
     }
 
     val currentValue = portfolio.totalPortfolioValue

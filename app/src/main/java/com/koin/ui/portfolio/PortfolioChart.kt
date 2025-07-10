@@ -57,7 +57,8 @@ fun TimeRangeSelector(
     modifier: Modifier = Modifier
 ) {
     LazyRow(
-        modifier = modifier.padding(vertical = 2.dp),
+        modifier = modifier.padding(vertical = 2.dp)
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         item {
@@ -78,7 +79,7 @@ fun TimeRangeSelector(
                     ),
                     modifier = modifier
                         .height(32.dp)
-                        .padding(horizontal = 2.dp)
+                        .padding(horizontal = 8.dp)
                 ) {
                     Text(range.displayName)
                 }

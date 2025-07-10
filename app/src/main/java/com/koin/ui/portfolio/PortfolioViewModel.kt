@@ -124,7 +124,7 @@ class PortfolioViewModel @Inject constructor(
                 event.pricePerCoin
             )
 
-            is PortfolioUiEvent.SelectTimeRange -> TODO()
+            is PortfolioUiEvent.SelectTimeRange -> _selectedTimeRange.value = event.timeRange
         }
     }
 
