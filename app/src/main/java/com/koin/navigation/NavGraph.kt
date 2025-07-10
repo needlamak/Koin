@@ -102,7 +102,7 @@ fun NavGraph(
                 state = state,
                 onEvent = viewModel::onEvent,
                 selectedCoin = selectedCoin,
-                navController = navController
+                navController = navController,
             )
         }
 

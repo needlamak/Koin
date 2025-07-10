@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -75,7 +76,6 @@ private fun PortfolioHoldingItem(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -133,70 +133,10 @@ private fun PortfolioHoldingItem(
                 )
                 
                 HoldingDetailItem(
-                    label = "Avg Price",
-                    value = holding.formattedAveragePurchasePrice,
-                    modifier = Modifier.weight(1f)
-                )
-                
-                HoldingDetailItem(
                     label = "Current Price",
                     value = holding.formattedCurrentPrice,
                     modifier = Modifier.weight(1f)
                 )
-            }
-
-            // Value and P&L row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Current Value",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = holding.formattedCurrentValue,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "Unrealized P&L",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "${holding.formattedUnrealizedPnL} (${holding.formattedUnrealizedPnLPercentage})",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = if (holding.isPositiveUnrealizedPnL) Color.Green else Color.Red,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            // Portfolio allocation
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Cost Basis: ${holding.formattedTotalCostBasis}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                // You can add portfolio allocation percentage here if needed
-                // Text(
-                //     text = "Portfolio: ${portfolio.getFormattedHoldingAllocation(holding.coinId)}",
-                //     style = MaterialTheme.typography.bodySmall,
-                //     color = MaterialTheme.colorScheme.onSurfaceVariant
-                // )
             }
         }
     }

@@ -26,4 +26,5 @@ interface PortfolioRepository {
     suspend fun refreshPortfolio()
     suspend fun getTransactionHistory(): List<Transaction>
     suspend fun resetPortfolio()
+//    fun getPortfolioHoldingById(coinId: String): Flow<PortfolioHolding?>
 }
