@@ -3,12 +3,17 @@ package com.koin.ui.splash
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.koin.R
@@ -35,10 +40,16 @@ fun SplashScreen(navController: NavController) {
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        // Replace with your logo drawable if available
-        Image(
-            painter = painterResource(id = R.drawable.ic_launcher_foreground),
-            contentDescription = null
-        )
+        Box(modifier = Modifier
+            .size(200.dp)
+            .clip(RoundedCornerShape(20))) {
+
+            Image(
+                painter = painterResource(id = R.drawable.koin),
+                contentDescription = null,
+                contentScale = ContentScale.Crop
+
+                )
+        }
     }
 }

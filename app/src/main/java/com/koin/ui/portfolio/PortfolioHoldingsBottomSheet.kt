@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -66,6 +67,8 @@ fun PortfolioHoldingsBottomSheet(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+
+                item{ Spacer(modifier = Modifier.height(50.dp)) }
             }
         }
     }
@@ -84,7 +87,8 @@ private fun PortfolioHoldingItem(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(8.dp)
+            modifier = Modifier
+                .padding(8.dp)
                 .height(72.dp),
         ) {
             Row(

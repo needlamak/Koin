@@ -12,8 +12,11 @@ import kotlinx.coroutines.flow.map
 import java.util.UUID
 import javax.inject.Inject
 
+import com.koin.app.notification.NotificationService
+
 class PortfolioRepositoryImpl @Inject constructor(
-    private val portfolioDao: PortfolioDao
+    private val portfolioDao: PortfolioDao,
+    private val notificationService: NotificationService
 ) : PortfolioRepository {
 
     override fun getHoldings(): Flow<List<PortfolioHolding>> {
@@ -72,6 +75,7 @@ class PortfolioRepositoryImpl @Inject constructor(
         val balance = portfolioDao.getBalance().map { it?.balance }.first() ?: 10000.0
         val newBalance = balance - (amount * price) - fee
         portfolioDao.updateBalance(PortfolioBalanceEntity(balance = newBalance))
+        notificationService.showCoinPurchaseNotification(coin.name, amount)
     }
 
     override suspend fun sellCoin(

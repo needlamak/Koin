@@ -8,6 +8,7 @@ import com.koin.domain.coin.CoinRepository
 import com.koin.domain.model.Coin
 import com.koin.domain.user.UserRepository
 import com.koin.domain.watchlist.WatchlistItem
+import com.koin.app.notification.NotificationService
 import com.koin.domain.watchlist.WatchlistRepository
 import com.koin.ui.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,6 +31,7 @@ class CoinDetailViewModel @Inject constructor(
     private val repository: CoinRepository,
     private val userRepository: UserRepository,
     private val watchlistRepository: WatchlistRepository,
+    private val notificationService: NotificationService,
     savedStateHandle: SavedStateHandle
 ) : BaseViewModel<CoinDetailUiState, CoinDetailUiEvent>() {
 
@@ -181,6 +183,7 @@ class CoinDetailViewModel @Inject constructor(
                     )
                     watchlistRepository.addToWatchlist(watchlistItem)
                     _uiState.update { it.copy(toastMessage = "${coin.name} added to watchlist") }
+                    notificationService.showWatchlistNotification(coin.name)
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Failed to update watchlist: ${e.message}") }
