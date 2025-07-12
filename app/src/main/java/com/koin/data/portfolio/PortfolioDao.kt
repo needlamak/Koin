@@ -29,6 +29,9 @@ interface PortfolioDao {
     @Insert
     suspend fun insertTransaction(transaction: PortfolioTransactionEntity)
 
+    @Query("SELECT * FROM portfolio_transactions ORDER BY timestamp DESC")
+    fun getAllTransactions(): Flow<List<PortfolioTransactionEntity>>
+
     @Query("SELECT * FROM portfolio_transactions WHERE coinId = :coinId ORDER BY timestamp DESC")
     fun getTransactionsForCoin(coinId: String): Flow<List<PortfolioTransactionEntity>>
 

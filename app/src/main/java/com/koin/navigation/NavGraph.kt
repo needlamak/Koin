@@ -23,6 +23,7 @@ import com.koin.ui.portfoliodetail.PortfolioDetailViewModel
 import com.koin.ui.profile.ProfileScreen
 import com.koin.ui.profile.ProfileViewModel
 import com.koin.ui.splash.SplashScreen
+import com.koin.ui.transactiondetail.TransactionDetailScreen
 import com.koin.ui.transactionsuccess.TransactionSuccessScreen
 import com.koin.ui.transactionhistory.TransactionHistoryScreen
 
@@ -157,6 +158,11 @@ fun NavGraph(
         // Transaction History
         composable(Screen.TransactionHistory.route) {
             TransactionHistoryScreen(navController)
+        }
+
+        // Transaction Detail
+        composable(Screen.TransactionDetail.route) {
+            TransactionDetailScreen(navController)
         }
     }
 }
