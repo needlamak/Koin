@@ -28,7 +28,15 @@ class PortfolioRepositoryImpl @Inject constructor(
     }
 
     override fun getBalance(): Flow<PortfolioBalance?> {
-        return portfolioDao.getBalance().map { it?.toDomain() }
+        return portfolioDao.getBalance().map { entity ->
+            if (entity == null) {
+                // If no balance exists, insert an initial one
+                portfolioDao.insertBalance(PortfolioBalanceEntity(balance = 10000.0))
+                PortfolioBalance(balance = 10000.0, lastUpdated = System.currentTimeMillis())
+            } else {
+                entity.toDomain()
+            }
+        }
     }
 
     override suspend fun buyCoin(coin: Coin, amount: Double) {
@@ -74,7 +82,7 @@ class PortfolioRepositoryImpl @Inject constructor(
 
         val balance = portfolioDao.getBalance().map { it?.balance }.first() ?: 10000.0
         val newBalance = balance - (amount * price) - fee
-        portfolioDao.updateBalance(PortfolioBalanceEntity(balance = newBalance))
+        portfolioDao.insertBalance(PortfolioBalanceEntity(balance = newBalance))
         notificationService.showCoinPurchaseNotification(coin.name, amount)
     }
 
@@ -112,7 +120,7 @@ class PortfolioRepositoryImpl @Inject constructor(
 
             val balance = portfolioDao.getBalance().map { it?.balance }.first() ?: 10000.0
             val newBalance = balance + (quantity * pricePerCoin) - fee
-            portfolioDao.updateBalance(PortfolioBalanceEntity(balance = newBalance))
+            portfolioDao.insertBalance(PortfolioBalanceEntity(balance = newBalance))
             notificationService.showCoinSoldNotification(holding.coinName, quantity)
         }
     }
@@ -127,5 +135,9 @@ class PortfolioRepositoryImpl @Inject constructor(
 
     override suspend fun resetPortfolio() {
         TODO("Not yet implemented")
+    }
+
+    override suspend fun insertInitialBalance(amount: Double) {
+        portfolioDao.insertBalance(PortfolioBalanceEntity(balance = amount))
     }
 }
