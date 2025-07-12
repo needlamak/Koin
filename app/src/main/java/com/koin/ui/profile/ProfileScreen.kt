@@ -1,6 +1,5 @@
 package com.koin.ui.profile
 
-import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,46 +13,28 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
@@ -61,8 +42,6 @@ import coil.compose.AsyncImage
 import com.koin.components.BottomNavBar
 import com.koin.domain.user.User
 import com.koin.domain.watchlist.WatchlistItem
-import androidx.compose.ui.text.style.TextOverflow
-import com.koin.ui.base.BaseViewModel
 
 @Composable
 fun ProfileScreen(
@@ -78,20 +57,9 @@ fun ProfileScreen(
         }
     }
 
-    // Show loading state if needed
-//    if (state.isLoading) {
-//        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-//            CircularProgressIndicator()
-//        }
-//        return
-//    }
-
-    state.user?.let { user ->
-        ProfileContentWithMenu(
-            user = user,
-            onSave = { name, email, bio ->
-                viewModel.onEvent(ProfileUiEvent.Save(name, email, bio, user.avatarUri))
-            },
+    state.user?.let {
+        ProfileContent(
+            user = it,
             viewModel = viewModel,
             navController = navController
         )
@@ -100,85 +68,32 @@ fun ProfileScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ProfileContentWithMenu(
+private fun ProfileContent(
     user: User,
-    onSave: (String, String, String?) -> Unit,
     viewModel: ProfileViewModel,
     navController: NavController
 ) {
-    val pagerState = rememberPagerState(pageCount = { 2 })
-    val tabs = listOf("Watchlist", "Edit Profile")
-
-    // State for search and filter
-    var searchQuery by remember { mutableStateOf("") }
-    var isSearchActive by remember { mutableStateOf(false) }
-
     Scaffold(
         topBar = {
-            Column {
-                TopAppBar(
-                    navigationIcon = {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back"
-                            )
-                        }
-                    },
-                    title = {
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (user.avatarUri != null) {
-                                AsyncImage(
-                                    model = user.avatarUri,
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(RoundedCornerShape(16.dp)),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.AccountCircle,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                    },
-                    actions = {
-
-                        var showMenu by remember { mutableStateOf(false) }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // More options menu
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(
-                                    Icons.Default.MoreVert,
-                                    contentDescription = "More"
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Settings") },
-                                    onClick = { /* TODO: Navigate to settings */ }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Logout") },
-                                    onClick = { viewModel.logout() }
-                                )
-                            }
-                        }
+            TopAppBar(
+                title = { Text(user.name) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
-                )
-            }
+                },
+                actions = {
+                    IconButton(onClick = { navController.navigate("settings") }) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Settings"
+                        )
+                    }
+                }
+            )
         },
         bottomBar = {
             BottomNavBar(navController = navController as NavHostController)
@@ -189,39 +104,13 @@ private fun ProfileContentWithMenu(
                 .padding(paddingValues)
                 .fillMaxSize()
         ) {
-            // Tabs
-            ScrollableTabRow(
-                selectedTabIndex = pagerState.currentPage,
-                modifier = Modifier.fillMaxWidth(),
-                edgePadding = 0.dp,
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary
-            ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        text = { Text(title) },
-                        selected = pagerState.currentPage == index,
-                        onClick = { /* handled by pager */ }
-                    )
+            WatchlistTab(
+                state = viewModel.uiState.collectAsState().value,
+                onEvent = viewModel::onEvent,
+                onCoinClick = { coinId ->
+                    navController.navigate("coin_detail/$coinId")
                 }
-            }
-
-            // Pager content
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.weight(1f)
-            ) { page ->
-                when (page) {
-                    0 -> WatchlistTab(
-                        state = viewModel.uiState.collectAsState().value, 
-                        onEvent = viewModel::onEvent,
-                        onCoinClick = { coinId ->
-                            navController.navigate("coin_detail/$coinId")
-                        }
-                    )
-                    1 -> EditProfileTab(user, onSave)
-                }
-            }
+            )
         }
     }
 }
@@ -239,11 +128,11 @@ private fun WatchlistTab(
             .padding(16.dp)
     ) {
         Text(
-            "Your Watchlist", 
+            "Your Watchlist",
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        
+
         if (state.watchlist.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -340,176 +229,3 @@ private fun WatchlistItemCard(
         }
     }
 }
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun EditProfileTab(
-    user: User,
-    onSave: (String, String, String?) -> Unit
-) {
-    var name by remember { mutableStateOf(user.name) }
-    var email by remember { mutableStateOf(user.email) }
-    var bio by remember { mutableStateOf(user.bio ?: "") }
-    val emailValid = Patterns.EMAIL_ADDRESS.matcher(email).matches()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
-        // Avatar
-        if (user.avatarUri != null) {
-            AsyncImage(
-                model = user.avatarUri,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(96.dp)
-                    .align(Alignment.CenterHorizontally),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // Form fields
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Name") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            singleLine = true,
-            isError = email.isNotBlank() && !emailValid,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Email,
-                imeAction = ImeAction.Next
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = bio,
-            onValueChange = { bio = it },
-            label = { Text("Bio (optional)") },
-            singleLine = false,
-            minLines = 3,
-            maxLines = 5,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = { onSave(name, email, bio) },
-            enabled = name.isNotBlank() && emailValid,
-            modifier = Modifier.align(Alignment.End)
-        ) {
-            Text("Save Changes")
-        }
-    }
-}
-
-
-//
-//@Composable
-//private fun WatchlistTab() {
-//    Column(
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .padding(16.dp)
-//            .verticalScroll(rememberScrollState()),
-//        horizontalAlignment = Alignment.CenterHorizontally
-//    ) {
-//        Text("Your Watchlist", style = MaterialTheme.typography.headlineSmall)
-//        Spacer(modifier = Modifier.height(16.dp))
-//        // Add watchlist content here
-//    }
-//}
-//
-//@OptIn(ExperimentalMaterial3Api::class)
-//@Composable
-//private fun EditProfileTab(
-//    user: User,
-//    onSave: (String, String, String?) -> Unit
-//) {
-//    var name by remember { mutableStateOf(user.name) }
-//    var email by remember { mutableStateOf(user.email) }
-//    var bio by remember { mutableStateOf(user.bio ?: "") }
-//    val emailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
-//
-//    Column(
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .padding(16.dp)
-//            .verticalScroll(rememberScrollState())
-//    ) {
-//        // Avatar
-//        if (user.avatarUri != null) {
-//            AsyncImage(
-//                model = user.avatarUri,
-//                contentDescription = null,
-//                modifier = Modifier
-//                    .size(96.dp)
-//                    .align(Alignment.CenterHorizontally),
-//                contentScale = ContentScale.Crop
-//            )
-//            Spacer(modifier = Modifier.height(16.dp))
-//        }
-//
-//        // Form fields
-//        OutlinedTextField(
-//            value = name,
-//            onValueChange = { name = it },
-//            label = { Text("Name") },
-//            singleLine = true,
-//            modifier = Modifier.fillMaxWidth()
-//        )
-//
-//        Spacer(modifier = Modifier.height(8.dp))
-//
-//        OutlinedTextField(
-//            value = email,
-//            onValueChange = { email = it },
-//            label = { Text("Email") },
-//            singleLine = true,
-//            isError = email.isNotBlank() && !emailValid,
-//            keyboardOptions = KeyboardOptions(
-//                keyboardType = KeyboardType.Email,
-//                imeAction = ImeAction.Next
-//            ),
-//            modifier = Modifier.fillMaxWidth()
-//        )
-//
-//        Spacer(modifier = Modifier.height(8.dp))
-//
-//        OutlinedTextField(
-//            value = bio,
-//            onValueChange = { bio = it },
-//            label = { Text("Bio (optional)") },
-//            singleLine = false,
-//            minLines = 3,
-//            maxLines = 5,
-//            modifier = Modifier.fillMaxWidth()
-//        )
-//
-//        Spacer(modifier = Modifier.height(16.dp))
-//
-//        Button(
-//            onClick = { onSave(name, email, bio) },
-//            enabled = name.isNotBlank() && emailValid,
-//            modifier = Modifier.align(Alignment.End)
-//        ) {
-//            Text("Save Changes")
-//        }
-//    }
-//}

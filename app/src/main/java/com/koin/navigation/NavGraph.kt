@@ -22,6 +22,8 @@ import com.koin.ui.portfoliodetail.PortfolioDetailScreen
 import com.koin.ui.portfoliodetail.PortfolioDetailViewModel
 import com.koin.ui.profile.ProfileScreen
 import com.koin.ui.profile.ProfileViewModel
+import com.koin.ui.profile.EditProfileScreen
+import com.koin.ui.settings.SettingsScreen
 import com.koin.ui.splash.SplashScreen
 import com.koin.ui.transactiondetail.TransactionDetailScreen
 import com.koin.ui.transactionsuccess.TransactionSuccessScreen
@@ -163,6 +165,23 @@ fun NavGraph(
         // Transaction Detail
         composable(Screen.TransactionDetail.route) {
             TransactionDetailScreen(navController)
+        }
+
+        // Settings
+        composable(Screen.Settings.route) {
+            SettingsScreen(navController = navController, onLogout = {
+                navController.navigate(Screen.Auth.route) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        inclusive = true
+                    }
+                    launchSingleTop = true
+                }
+            })
+        }
+
+        // Edit Profile
+        composable(Screen.EditProfile.route) {
+            EditProfileScreen(navController)
         }
     }
 }

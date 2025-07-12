@@ -27,4 +27,5 @@ interface PortfolioRepository {
     suspend fun refreshPortfolio()
     suspend fun getTransactionHistory(): List<Transaction>
     suspend fun resetPortfolio()
+    suspend fun insertInitialBalance(amount: Double)
 }

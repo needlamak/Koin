@@ -39,6 +39,9 @@ interface PortfolioDao {
     @Query("SELECT * FROM portfolio_balance WHERE id = 1")
     fun getBalance(): Flow<PortfolioBalanceEntity?>
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBalance(balance: PortfolioBalanceEntity)
+
     @Update
     suspend fun updateBalance(balance: PortfolioBalanceEntity)
 

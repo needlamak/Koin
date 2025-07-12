@@ -1,5 +1,6 @@
 package com.koin.ui.portfolio
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -58,7 +60,9 @@ import com.koin.components.BottomNavBar
 import com.koin.domain.model.Coin
 import com.koin.domain.portfolio.Portfolio
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.layout.ContentScale
 import androidx.navigation.NavController
+import com.koin.R
 import com.koin.navigation.Screen
 import com.koin.ui.portfoliodetail.SellSuccessBottomSheet
 import com.koin.ui.portfoliodetail.SellTransactionDetails
@@ -266,12 +270,13 @@ private fun PortfolioTopBar(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(CircleShape)
+                        .clip(RoundedCornerShape(20))
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
+                    Image(
+                        painter = painterResource(id = R.drawable.koin),
+                        contentScale = ContentScale.Crop,
                         contentDescription = "Profile"
                     )
                 }
