@@ -24,6 +24,8 @@ import com.koin.ui.profile.ProfileScreen
 import com.koin.ui.profile.ProfileViewModel
 import com.koin.ui.profile.EditProfileScreen
 import com.koin.ui.settings.SettingsScreen
+import com.koin.ui.notification.NotificationScreen
+import com.koin.ui.notification.NotificationDetailScreen
 import com.koin.ui.splash.SplashScreen
 import com.koin.ui.transactiondetail.TransactionDetailScreen
 import com.koin.ui.transactionsuccess.TransactionSuccessScreen
@@ -87,8 +89,6 @@ fun NavGraph(
                 viewModel = viewModel,
                 onRegistered = {
                     navController.navigate(Screen.Portfolio.route) {
-                        launchSingleTop = true
-                        popUpTo(Screen.Portfolio.route) { inclusive = false }
                         popUpTo(Screen.Auth.route) { inclusive = true }
                     }
                 }
@@ -171,10 +171,9 @@ fun NavGraph(
         composable(Screen.Settings.route) {
             SettingsScreen(navController = navController, onLogout = {
                 navController.navigate(Screen.Auth.route) {
-                    popUpTo(navController.graph.findStartDestination().id) {
+                    popUpTo(navController.graph.id) {
                         inclusive = true
                     }
-                    launchSingleTop = true
                 }
             })
         }
@@ -182,6 +181,19 @@ fun NavGraph(
         // Edit Profile
         composable(Screen.EditProfile.route) {
             EditProfileScreen(navController)
+        }
+
+        // Notification List
+        composable(Screen.Notification.route) {
+            NotificationScreen(navController)
+        }
+
+        // Notification Detail
+        composable(Screen.NotificationDetail.route) {
+            val notificationId = it.arguments?.getString("notificationId")?.toLongOrNull()
+            if (notificationId != null) {
+                NotificationDetailScreen(navController, notificationId = notificationId)
+            }
         }
     }
 }

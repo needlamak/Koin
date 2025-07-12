@@ -20,9 +20,12 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -44,6 +47,7 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,10 +59,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.koin.components.BottomNavBar
 import com.koin.domain.model.Coin
 import com.koin.domain.portfolio.Portfolio
+import com.koin.ui.notification.NotificationViewModel
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.layout.ContentScale
 import androidx.navigation.NavController
@@ -75,7 +81,8 @@ fun PortfolioScreen(
     selectedCoin: Coin?,
     navController: NavController,
     onPortfolioCoinClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    notificationViewModel: NotificationViewModel = hiltViewModel()
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     var showAddFundsSheet by remember { mutableStateOf(false) }
@@ -111,7 +118,9 @@ fun PortfolioScreen(
                 PortfolioTopBar(
                     onAddFunds = { showAddFundsSheet = true },
                     onScanQr = { showScanQrSheet = true },
-                    onSendFunds = { showSendFundsSheet = true }
+                    onSendFunds = { showSendFundsSheet = true },
+                    navController = navController,
+                    notificationViewModel = notificationViewModel
                 )
             }
         ) {
@@ -256,8 +265,12 @@ fun PortfolioScreen(
 private fun PortfolioTopBar(
     onAddFunds: () -> Unit,
     onScanQr: () -> Unit,
-    onSendFunds: () -> Unit
+    onSendFunds: () -> Unit,
+    navController: NavController,
+    notificationViewModel: NotificationViewModel
 ) {
+    val unreadCount by notificationViewModel.unreadCount.collectAsState()
+
     TopAppBar(
         modifier = Modifier.statusBarsPadding(),
         colors = TopAppBarDefaults.topAppBarColors(
@@ -282,6 +295,23 @@ private fun PortfolioTopBar(
                 }
 
                 Spacer(Modifier.weight(1f))
+
+                // Notification Icon
+                BadgedBox(
+                    badge = {
+                        if (unreadCount > 0) {
+                            Badge { Text(unreadCount.toString()) }
+                        }
+                    },
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                ) {
+                    IconButton(onClick = { navController.navigate(Screen.Notification.route) }) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notifications"
+                        )
+                    }
+                }
 
                 // Menu button
                 var showMenu by remember { mutableStateOf(false) }
