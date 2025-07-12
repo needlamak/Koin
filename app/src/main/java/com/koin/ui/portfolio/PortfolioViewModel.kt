@@ -14,6 +14,7 @@ import com.koin.domain.portfolio.PortfolioHolding
 import com.koin.domain.portfolio.RefreshPortfolioUseCase
 import com.koin.domain.portfolio.ResetPortfolioUseCase
 import com.koin.domain.portfolio.SellCoinUseCase
+import com.koin.domain.notification.Notification
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +37,8 @@ class PortfolioViewModel @Inject constructor(
     private val refreshPortfolioUseCase: RefreshPortfolioUseCase,
     private val resetPortfolioUseCase: ResetPortfolioUseCase,
     private val getBalanceUseCase: GetBalanceUseCase,
-    private val coinRepository: CoinRepository
+    private val coinRepository: CoinRepository,
+    private val notificationRepository: com.koin.data.notification.NotificationRepository
 ) : ViewModel() {
 
     private val _isLoading = MutableStateFlow(false)
@@ -180,6 +182,14 @@ class PortfolioViewModel @Inject constructor(
                         totalPrice = quantity * coin.currentPrice
                     )
                     _showBuySuccessBottomSheet.value = true
+
+                    // Add notification for buy
+                    notificationRepository.insert(
+                        Notification(
+                            title = "Coin Purchased: ${coin.name}",
+                            body = "You have successfully purchased ${quantity} of ${coin.name} for ${String.format("%.2f", quantity * coin.currentPrice)}."
+                        )
+                    )
                 } else {
                     _error.value = "Could not find coin to buy"
                 }
@@ -195,6 +205,17 @@ class PortfolioViewModel @Inject constructor(
                 sellCoinUseCase(coinId, quantity, pricePerCoin)
                 _error.value = null
                 refreshPortfolio()
+
+                // Add notification for sell
+                val coin = coinRepository.getCoinById(coinId).first().getOrNull()
+                coin?.let {
+                    notificationRepository.insert(
+                        Notification(
+                            title = "Coin Sold: ${it.name}",
+                            body = "You have successfully sold ${quantity} of ${it.name} for ${String.format("%.2f", quantity * pricePerCoin)}."
+                        )
+                    )
+                }
             } catch (e: Exception) {
                 _error.value = "Failed to sell coin: ${e.localizedMessage}"
             }
