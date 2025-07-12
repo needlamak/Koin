@@ -63,4 +63,17 @@ class NotificationService @Inject constructor(
 
         notificationManager.notify(WATCHLIST_NOTIFICATION_ID, notification)
     }
+
+    fun showCoinSoldNotification(coinName: String, amount: Double) {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.koin) // Replace with your app's icon
+            .setContentTitle("Coin Sold!")
+            .setContentText("You have successfully sold $amount of $coinName.")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(COIN_PURCHASE_NOTIFICATION_ID, notification)
+    }
 }

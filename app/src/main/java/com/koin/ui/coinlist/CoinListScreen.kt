@@ -145,22 +145,36 @@ fun CoinListScreen(
             }
     }
 
-    var showBuyBottomSheet by remember { mutableStateOf(false) }
-    var selectedCoin by remember { mutableStateOf<Coin?>(null) }
+    
     val sheetState = rememberModalBottomSheetState()
 
-    if (showBuyBottomSheet) {
+    if (state.showBuyDialog) {
         ModalBottomSheet(
-            onDismissRequest = { showBuyBottomSheet = false },
+            onDismissRequest = { onEvent(CoinListUiEvent.HideBuyDialog) },
             sheetState = sheetState
         ) {
-            selectedCoin?.let { coin ->
+            state.selectedCoinForBuy?.let { coin ->
                 BuyBottomSheet(
                     coin = coin,
                     onConfirm = { amount ->
                         onEvent(CoinListUiEvent.BuyCoin(coin, amount))
-                        showBuyBottomSheet = false
                     }
+                )
+            }
+        }
+    }
+
+    if (state.showBuySuccessBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { onEvent(CoinListUiEvent.HideBuySuccessBottomSheet) },
+            sheetState = sheetState
+        ) {
+            state.buyTransactionDetails?.let { details ->
+                BuySuccessBottomSheet(
+                    coinName = details.coinName,
+                    quantity = details.quantity,
+                    totalPrice = details.totalPrice,
+                    onDismiss = { onEvent(CoinListUiEvent.HideBuySuccessBottomSheet) }
                 )
             }
         }
@@ -366,10 +380,15 @@ fun CoinListScreen(
                                     CoinItem(
                                         coin = coin,
                                         onClick = { onCoinClick(coin.id) },
-                                        onToggleWatchlist = { onEvent(CoinListUiEvent.ToggleWatchlist(it)) },
+                                        onToggleWatchlist = {
+                                            onEvent(
+                                                CoinListUiEvent.ToggleWatchlist(
+                                                    it
+                                                )
+                                            )
+                                        },
                                         onBuyClick = {
-                                            selectedCoin = coin
-                                            showBuyBottomSheet = true
+                                            onEvent(CoinListUiEvent.ShowBuyDialog(coin))
                                         }
                                     )
                                 }
@@ -496,34 +515,6 @@ private fun CoinItem(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun BuyBottomSheet(
-    coin: Coin,
-    onConfirm: (Double) -> Unit
-) {
-    var amount by remember { mutableStateOf("") }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "Buy ${coin.name}", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(
-            value = amount,
-            onValueChange = { amount = it },
-            label = { Text("Amount") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { onConfirm(amount.toDouble()) }) {
-            Text("Confirm Purchase")
         }
     }
 }

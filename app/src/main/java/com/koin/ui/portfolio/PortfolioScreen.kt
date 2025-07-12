@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -52,11 +53,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.koin.components.BottomNavBar
 import com.koin.domain.model.Coin
 import com.koin.domain.portfolio.Portfolio
+import androidx.compose.foundation.clickable
+import androidx.navigation.NavController
+import com.koin.navigation.Screen
+import com.koin.ui.portfoliodetail.SellSuccessBottomSheet
+import com.koin.ui.portfoliodetail.SellTransactionDetails
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,6 +77,7 @@ fun PortfolioScreen(
     var showAddFundsSheet by remember { mutableStateOf(false) }
     var showScanQrSheet by remember { mutableStateOf(false) }
     var showSendFundsSheet by remember { mutableStateOf(false) }
+    var showSellSuccessSheet by remember { mutableStateOf(false) }
 
     val bottomSheetState = rememberStandardBottomSheetState(
         initialValue = SheetValue.PartiallyExpanded,
@@ -119,6 +125,7 @@ fun PortfolioScreen(
                     // Balance Header
                     BalanceHeader(
                         portfolio = state.portfolio,
+                        navController = navController,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
                     PortfolioChart(
@@ -180,18 +187,61 @@ fun PortfolioScreen(
                     onEvent(
                         PortfolioUiEvent.BuyCoin(
                             coinId = selectedCoin.id,
-                            quantity = quantity,
-                            pricePerCoin = selectedCoin.currentPrice
+                            quantity = quantity
                         )
                     )
                 }
             )
         }
 
+        // Buy Success Bottom Sheet
+        if (state.showBuySuccessBottomSheet && state.buyTransactionDetails != null) {
+            ModalBottomSheet(
+                onDismissRequest = { onEvent(PortfolioUiEvent.HideBuySuccessBottomSheet) },
+                tonalElevation = 0.dp,
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+            ) {
+                BuySuccessBottomSheet(
+                    coinName = state.buyTransactionDetails.coinName,
+                    quantity = state.buyTransactionDetails.quantity,
+                    totalPrice = state.buyTransactionDetails.totalPrice,
+                    onDismiss = { onEvent(PortfolioUiEvent.HideBuySuccessBottomSheet) }
+                )
+            }
+        }
+
         // Handle errors
         state.error?.let { error ->
             LaunchedEffect(error) {
                 snackbarHostState.showSnackbar(error)
+            }
+        }
+
+        // Handle sell success from PortfolioDetailScreen
+        LaunchedEffect(navController.currentBackStackEntry) {
+            navController.currentBackStackEntry?.savedStateHandle?.get<SellTransactionDetails>("sellSuccessDetails")?.let {
+                showSellSuccessSheet = true
+                // Clear the savedStateHandle entry to prevent showing the dialog again on recomposition
+                navController.currentBackStackEntry?.savedStateHandle?.remove<SellTransactionDetails>("sellSuccessDetails")
+            }
+        }
+
+        // Sell Success Bottom Sheet
+        if (showSellSuccessSheet && navController.currentBackStackEntry?.savedStateHandle?.get<SellTransactionDetails>("sellSuccessDetails") != null) {
+            val sellDetails = navController.currentBackStackEntry?.savedStateHandle?.get<SellTransactionDetails>("sellSuccessDetails")
+            if (sellDetails != null) {
+                ModalBottomSheet(
+                    onDismissRequest = { showSellSuccessSheet = false },
+                    tonalElevation = 0.dp,
+                    shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                ) {
+                    SellSuccessBottomSheet(
+                        coinName = sellDetails.coinName,
+                        quantity = sellDetails.quantity,
+                        totalPrice = sellDetails.totalPrice,
+                        onDismiss = { showSellSuccessSheet = false }
+                    )
+                }
             }
         }
     }
@@ -288,9 +338,12 @@ private fun PortfolioTopBar(
     )
 }
 
+
+
 @Composable
 private fun BalanceHeader(
     portfolio: Portfolio,
+    navController: NavController,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -329,11 +382,23 @@ private fun BalanceHeader(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Available balance
-        Text(
-            text = "Available: ${portfolio.formattedBalance}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(
+            modifier = Modifier.clickable { navController.navigate(Screen.TransactionHistory.route) },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Available: ${portfolio.formattedBalance}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Icon(
+                imageVector = Icons.Default.History,
+                contentDescription = "Transaction History",
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 

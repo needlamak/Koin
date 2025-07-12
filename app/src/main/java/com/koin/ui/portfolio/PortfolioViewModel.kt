@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.koin.data.coin.TimeRange
 import com.koin.domain.coin.CoinRepository
+import com.koin.domain.model.Coin
 import com.koin.domain.portfolio.BuyCoinUseCase
 import com.koin.domain.portfolio.GetBalanceUseCase
 import com.koin.domain.portfolio.GetPortfolioUseCase
@@ -35,7 +36,7 @@ class PortfolioViewModel @Inject constructor(
     private val refreshPortfolioUseCase: RefreshPortfolioUseCase,
     private val resetPortfolioUseCase: ResetPortfolioUseCase,
     private val getBalanceUseCase: GetBalanceUseCase,
-    coinRepository: CoinRepository
+    private val coinRepository: CoinRepository
 ) : ViewModel() {
 
     private val _isLoading = MutableStateFlow(false)
@@ -45,6 +46,8 @@ class PortfolioViewModel @Inject constructor(
     private val _selectedCoinForBuy = MutableStateFlow<String?>(null)
     private val _showBottomSheet = MutableStateFlow(false)
     private val _selectedTimeRange = MutableStateFlow(TimeRange.ALL)
+    private val _showBuySuccessBottomSheet = MutableStateFlow(false)
+    private val _buyTransactionDetails = MutableStateFlow<BuyTransactionDetails?>(null)
 
     // Create the balance flow
     private val balanceFlow = flow {
@@ -61,7 +64,9 @@ class PortfolioViewModel @Inject constructor(
         _showBuyDialog,
         _selectedCoinForBuy,
         _showBottomSheet,
-        _selectedTimeRange
+        _selectedTimeRange,
+        _showBuySuccessBottomSheet,
+        _buyTransactionDetails
     ) { flows ->
         val holdings = flows[0] as List<PortfolioHolding>
         val balance = flows[1] as PortfolioBalance?
@@ -72,6 +77,8 @@ class PortfolioViewModel @Inject constructor(
         val selectedCoinForBuy = flows[6] as String?
         val showBottomSheet = flows[7] as Boolean
         val selectedTimeRange = flows[8] as TimeRange
+        val showBuySuccessBottomSheet = flows[9] as Boolean
+        val buyTransactionDetails = flows[10] as BuyTransactionDetails?
 
         val portfolio = Portfolio(
             balance = balance?.balance ?: Portfolio.Companion.INITIAL_BALANCE,
@@ -87,7 +94,9 @@ class PortfolioViewModel @Inject constructor(
             showBuyDialog = showBuyDialog,
             selectedCoinForBuy = selectedCoinForBuy,
             showBottomSheet = showBottomSheet,
-            selectedTimeRange = selectedTimeRange
+            selectedTimeRange = selectedTimeRange,
+            showBuySuccessBottomSheet = showBuySuccessBottomSheet,
+            buyTransactionDetails = buyTransactionDetails
         )
 
         emit(uiState)
@@ -114,8 +123,7 @@ class PortfolioViewModel @Inject constructor(
 
             is PortfolioUiEvent.BuyCoin -> buyCoin(
                 event.coinId,
-                event.quantity,
-                event.pricePerCoin
+                event.quantity
             )
 
             is PortfolioUiEvent.SellCoin -> sellCoin(
@@ -125,6 +133,7 @@ class PortfolioViewModel @Inject constructor(
             )
 
             is PortfolioUiEvent.SelectTimeRange -> _selectedTimeRange.value = event.timeRange
+            PortfolioUiEvent.HideBuySuccessBottomSheet -> _showBuySuccessBottomSheet.value = false
         }
     }
 
@@ -155,15 +164,22 @@ class PortfolioViewModel @Inject constructor(
         }
     }
 
-    private fun buyCoin(coinId: String, quantity: Double, pricePerCoin: Double) {
+    private fun buyCoin(coinId: String, quantity: Double) {
         viewModelScope.launch {
             try {
-                val coin = selectedCoin.first()
+                val result: Result<com.koin.domain.model.Coin> = coinRepository.getCoinById(coinId).first() as Result<Coin>
+                val coin: com.koin.domain.model.Coin? = result.getOrNull()
                 if (coin != null) {
                     buyCoinUseCase(coin, quantity)
                     _showBuyDialog.value = false
                     _selectedCoinForBuy.value = null
                     _error.value = null
+                    _buyTransactionDetails.value = BuyTransactionDetails(
+                        coinName = coin.name,
+                        quantity = quantity,
+                        totalPrice = quantity * coin.currentPrice
+                    )
+                    _showBuySuccessBottomSheet.value = true
                 } else {
                     _error.value = "Could not find coin to buy"
                 }
@@ -178,6 +194,7 @@ class PortfolioViewModel @Inject constructor(
             try {
                 sellCoinUseCase(coinId, quantity, pricePerCoin)
                 _error.value = null
+                refreshPortfolio()
             } catch (e: Exception) {
                 _error.value = "Failed to sell coin: ${e.localizedMessage}"
             }

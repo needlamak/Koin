@@ -40,7 +40,14 @@ class CoinListViewModel @Inject constructor(
             is CoinListUiEvent.ResetSearch -> resetSearchQuery() // For clearing just the search query
             is CoinListUiEvent.ToggleWatchlist -> toggleWatchlist(event.coin)
             is CoinListUiEvent.BuyCoin -> buyCoin(event.coin, event.amount)
+            is CoinListUiEvent.HideBuySuccessBottomSheet -> hideBuySuccessBottomSheet()
+            CoinListUiEvent.HideBuyDialog -> hideBuyDialog()
+            is CoinListUiEvent.ShowBuyDialog -> showBuyDialog(event.coin)
         }
+    }
+
+    private fun hideBuySuccessBottomSheet() {
+        _uiState.update { it.copy(showBuySuccessBottomSheet = false, buyTransactionDetails = null) }
     }
 
     private fun loadCoins() {
@@ -119,7 +126,7 @@ class CoinListViewModel @Inject constructor(
             )
         }
     }
-    
+
     private fun toggleWatchlist(coin: Coin) {
         viewModelScope.launch {
             try {
@@ -143,13 +150,39 @@ class CoinListViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 portfolioRepository.buyCoin(coin, amount)
+                val totalPrice = amount * coin.currentPrice
+                _uiState.update {
+                    it.copy(
+                        showBuySuccessBottomSheet = true,
+                        buyTransactionDetails = BuyTransactionDetails(
+                            coinName = coin.name,
+                            quantity = amount,
+                            totalPrice = totalPrice
+                        ),
+                        showBuyDialog = false // Hide the buy dialog after successful purchase
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Failed to buy coin: ${e.message}") }
             }
         }
     }
+
+    private fun showBuyDialog(coin: Coin) {
+        _uiState.update { it.copy(showBuyDialog = true, selectedCoinForBuy = coin) }
+    }
+
+    private fun hideBuyDialog() {
+        _uiState.update { it.copy(showBuyDialog = false, selectedCoinForBuy = null) }
+    }
 }
 
+
+data class BuyTransactionDetails(
+    val coinName: String,
+    val quantity: Double,
+    val totalPrice: Double
+)
 
 data class CoinListUiState(
     val coins: List<Coin> = emptyList(),
@@ -157,7 +190,11 @@ data class CoinListUiState(
     val searchQuery: String = "",
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val showBuyDialog: Boolean = false,
+    val selectedCoinForBuy: Coin? = null,
+    val showBuySuccessBottomSheet: Boolean = false,
+    val buyTransactionDetails: BuyTransactionDetails? = null
 )
 
 sealed class CoinListUiEvent {
@@ -168,6 +205,9 @@ sealed class CoinListUiEvent {
     object ResetSearch : CoinListUiEvent() // Event for resetting just the search query
     data class ToggleWatchlist(val coin: Coin) : CoinListUiEvent()
     data class BuyCoin(val coin: Coin, val amount: Double) : CoinListUiEvent()
+    object HideBuySuccessBottomSheet : CoinListUiEvent()
+    data class ShowBuyDialog(val coin: Coin) : CoinListUiEvent()
+    object HideBuyDialog : CoinListUiEvent()
 }
 
 

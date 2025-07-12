@@ -113,6 +113,7 @@ class PortfolioRepositoryImpl @Inject constructor(
             val balance = portfolioDao.getBalance().map { it?.balance }.first() ?: 10000.0
             val newBalance = balance + (quantity * pricePerCoin) - fee
             portfolioDao.updateBalance(PortfolioBalanceEntity(balance = newBalance))
+            notificationService.showCoinSoldNotification(holding.coinName, quantity)
         }
     }
 

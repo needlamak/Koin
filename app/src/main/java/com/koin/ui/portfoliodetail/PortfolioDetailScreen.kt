@@ -1,5 +1,4 @@
 package com.koin.ui.portfoliodetail
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -35,12 +34,21 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -51,9 +59,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
 import coil.compose.AsyncImage
 import com.koin.data.coin.TimeRange
-import com.koin.domain.portfolio.PortfolioHolding
 import com.koin.ui.coindetail.EnhancedPriceChart
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,11 +70,32 @@ fun PortfolioDetailScreen(
     state: PortfolioDetailUiState,
     onEvent: (PortfolioDetailUiEvent) -> Unit,
     onBackClick: () -> Unit,
+    navigateToTransactionSuccess: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val portfolioCoin = state.portfolioCoin
     val selectedTimeRange = state.selectedTimeRange
     val scrollState = rememberScrollState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    var showSellSuccessSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.transactionSuccess) {
+        if (state.transactionSuccess) {
+            showSellSuccessSheet = true
+            onEvent(PortfolioDetailUiEvent.ClearToast) // Clear the transaction success state
+        }
+    }
+
+    LaunchedEffect(state.error) {
+        state.error?.let { errorMessage ->
+            // Show Snackbar for error
+            // You might need a SnackbarHostState passed from the parent Scaffold
+            // For now, let's assume a simple toast or log
+            println("Error: $errorMessage")
+            onEvent(PortfolioDetailUiEvent.ClearToast) // Clear the error state
+        }
+    }
 
     // Calculate scroll progress for animations
     val scrollProgress = (scrollState.value / 500f).coerceIn(0f, 1f)
@@ -131,7 +160,8 @@ fun PortfolioDetailScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = state.isLoading || state.isLoadingHistoricalData, // Assuming isLoading also covers refreshing
@@ -151,12 +181,7 @@ fun PortfolioDetailScreen(
                 }
 
                 portfolioCoin == null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Portfolio coin not found")
-                    }
+                    // Handled by error state and Snackbar
                 }
 
                 else -> {
@@ -330,13 +355,39 @@ fun PortfolioDetailScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             lineHeight = 20.sp
                         )
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Sell Button
+                        Button(
+                            onClick = {
+                                onEvent(
+                                    PortfolioDetailUiEvent.SellCoin(
+                                        coinId = portfolioCoin.coinId,
+                                        quantity = portfolioCoin.quantity,
+                                        pricePerCoin = portfolioCoin.currentPrice
+                                    )
+                                )
+                                navigateToTransactionSuccess()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text("Sell")
+                        }
                         Spacer(modifier = Modifier.height(32.dp))
                     }
                 }
             }
         }
+
+        
     }
 }
+
 
 @Composable
 private fun TimeRangeButton(

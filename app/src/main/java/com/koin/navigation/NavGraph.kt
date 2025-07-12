@@ -23,6 +23,8 @@ import com.koin.ui.portfoliodetail.PortfolioDetailViewModel
 import com.koin.ui.profile.ProfileScreen
 import com.koin.ui.profile.ProfileViewModel
 import com.koin.ui.splash.SplashScreen
+import com.koin.ui.transactionsuccess.TransactionSuccessScreen
+import com.koin.ui.transactionhistory.TransactionHistoryScreen
 
 @Composable
 fun NavGraph(
@@ -123,7 +125,10 @@ fun NavGraph(
             PortfolioDetailScreen(
                 state = state,
                 onEvent = viewModel::onEvent,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                navigateToTransactionSuccess = {
+                    navController.navigate(Screen.TransactionSuccess.route)
+                }
             )
         }
 
@@ -142,6 +147,16 @@ fun NavGraph(
                 },
                 navController = navController
             )
+        }
+
+        // Transaction Success
+        composable(Screen.TransactionSuccess.route) {
+            TransactionSuccessScreen(navController)
+        }
+
+        // Transaction History
+        composable(Screen.TransactionHistory.route) {
+            TransactionHistoryScreen(navController)
         }
     }
 }

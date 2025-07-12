@@ -6,7 +6,9 @@ import com.koin.domain.coin.CoinRepository
 import com.koin.domain.portfolio.PortfolioRepository
 import com.koin.ui.base.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
@@ -24,6 +26,8 @@ class PortfolioDetailViewModel @Inject constructor(
 
     override val _uiState: MutableStateFlow<PortfolioDetailUiState> =
         MutableStateFlow(PortfolioDetailUiState(isLoading = true))
+
+    
 
     init {
         loadHistoricalData()
@@ -43,6 +47,28 @@ class PortfolioDetailViewModel @Inject constructor(
             }
             is PortfolioDetailUiEvent.ClearToast -> {
                 // Not used yet, but kept for consistency
+            }
+            is PortfolioDetailUiEvent.SellCoin -> {
+                sellCoin(event.coinId, event.quantity, event.pricePerCoin)
+            }
+        }
+    }
+
+    private fun sellCoin(coinId: String, quantity: Double, pricePerCoin: Double) {
+        viewModelScope.launch {
+            try {
+                portfolioRepository.sellCoin(coinId, quantity, pricePerCoin)
+                _uiState.update { it.copy(
+                    transactionSuccess = true,
+                    error = null,
+                    soldCoinDetails = SellTransactionDetails(
+                        coinName = it.portfolioCoin?.coinName ?: "",
+                        quantity = quantity,
+                        totalPrice = quantity * pricePerCoin
+                    )
+                ) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to sell coin: ${e.localizedMessage}") }
             }
         }
     }
