@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAlert
+import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -220,6 +221,9 @@ fun PortfolioDetailScreen(
                             atlDate = ""
                         )
                         priceAlertViewModel.showCreateAlertDialog(coin)
+                    },
+                    onBuyClick = {
+                        // TODO: Navigate to Buy Screen
                     }
                 )
             }
@@ -430,6 +434,7 @@ fun PortfolioDetailScreen(
 fun HorizontalFloatingToolBar(
     onSellClick: () -> Unit,
     onCreatePriceAlertClick: () -> Unit,
+    onBuyClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -442,6 +447,11 @@ fun HorizontalFloatingToolBar(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            TextButton(onClick = onBuyClick) {
+                Icon(Icons.Default.AddShoppingCart, contentDescription = "Buy")
+                Spacer(Modifier.width(8.dp))
+                Text("Buy")
+            }
             TextButton(onClick = onCreatePriceAlertClick) {
                 Icon(Icons.Default.AddAlert, contentDescription = "Create Price Alert")
                 Spacer(Modifier.width(8.dp))

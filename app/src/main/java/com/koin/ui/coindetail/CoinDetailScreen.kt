@@ -1,6 +1,8 @@
 package com.koin.ui.coindetail
 
 // You might also need imports for Indicator, pullToRefresh if they are public
+
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -35,6 +37,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,24 +47,32 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
-import android.widget.Toast
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.koin.data.coin.TimeRange
+import com.koin.ui.portfoliodetail.HorizontalFloatingToolBar
+import com.koin.ui.pricealert.CreatePriceAlertDialog
+import com.koin.ui.pricealert.PriceAlertViewModel
 import java.text.NumberFormat
 import java.util.Locale
+
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 @OptIn(ExperimentalMaterial3Api::class) // Add ExperimentalMaterialApi
 @Composable
@@ -69,6 +80,7 @@ fun CoinDetailScreen(
     state: CoinDetailUiState,
     onEvent: (CoinDetailUiEvent) -> Unit,
     onBackClick: () -> Unit,
+    priceAlertViewModel: PriceAlertViewModel = hiltViewModel(),
     modifier: Modifier = Modifier
 ) {
     val coin = state.coin
@@ -76,6 +88,9 @@ fun CoinDetailScreen(
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val hapticFeedback = LocalHapticFeedback.current
+
+    val priceAlertState by priceAlertViewModel.uiState.collectAsState()
+    val createAlertState by priceAlertViewModel.createAlertState.collectAsState()
 
     // Handle toast messages
     LaunchedEffect(state.toastMessage) {
@@ -95,6 +110,17 @@ fun CoinDetailScreen(
     }
 
     val priceHistory = state.historicalData.map { it.price }
+
+    if (priceAlertState.showCreateDialog && priceAlertState.selectedCoin != null) {
+        CreatePriceAlertDialog(
+            coin = priceAlertState.selectedCoin!!,
+            createAlertState = createAlertState,
+            onDismiss = { priceAlertViewModel.hideCreateAlertDialog() },
+            onTargetPriceChange = { priceAlertViewModel.updateTargetPrice(it) },
+            onAlertTypeChange = { priceAlertViewModel.updateAlertType(it) },
+            onCreateAlert = { priceAlertViewModel.createAlert() }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -176,7 +202,23 @@ fun CoinDetailScreen(
                         )
                     }
                 })
-        }
+        },
+        floatingActionButton = {
+            coin?.let {
+                HorizontalFloatingToolBar(
+                    onBuyClick = { 
+                        // TODO: Navigate to Buy Screen
+                    },
+                    onCreatePriceAlertClick = {
+                        priceAlertViewModel.showCreateAlertDialog(it)
+                    },
+                    onSellClick = {
+                        // TODO: Navigate to Sell Screen or show dialog
+                    }
+                )
+            }
+        },
+        floatingActionButtonPosition = FabPosition.Center
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
