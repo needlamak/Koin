@@ -3,10 +3,14 @@ package com.koin.data.coin
 import android.Manifest
 import android.util.Log
 import androidx.annotation.RequiresPermission
+import com.koin.app.pricealert.PriceAlertDao
 import com.koin.data.coin.dto.PriceDataPoint
 import com.koin.data.coin.dto.toPriceDataPoints
+import com.koin.data.pricealert.PriceAlertEntity
 import com.koin.domain.coin.CoinRepository
 import com.koin.domain.model.Coin
+import com.koin.domain.pricealert.PriceAlert
+import com.koin.domain.pricealert.PriceAlertType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -23,7 +27,8 @@ import javax.inject.Singleton
 class CoinRepositoryImpl @Inject constructor(
     private val apiService: CoinGeckoApiService,
     private val coinDao: CoinDao,
-    private val networkUtil: NetworkUtil
+    private val networkUtil: NetworkUtil,
+    private val priceAlertDao: PriceAlertDao
 ) : CoinRepository {
 
     private val _coins = MutableStateFlow<Map<String, Coin>>(emptyMap())
@@ -33,6 +38,7 @@ class CoinRepositoryImpl @Inject constructor(
 
     override fun getAllCoins(): Flow<Result<List<Coin>>> =
         coins.map { Result.success(it.values.toList()) }
+
     override fun getCoinById(id: String?): Flow<Result<Coin?>> =
         coins.map { Result.success(it[id]) }
 
@@ -67,13 +73,15 @@ class CoinRepositoryImpl @Inject constructor(
             coinDao.insertAll(domainCoins.map { it.toEntity() })
 
             // Prefetch chart data for all coins and selected time ranges
-            val selectedTimeRanges = listOf(TimeRange.ONE_DAY, TimeRange.ONE_WEEK, TimeRange.ONE_YEAR, TimeRange.ALL)
+            val selectedTimeRanges =
+                listOf(TimeRange.ONE_DAY, TimeRange.ONE_WEEK, TimeRange.ONE_YEAR, TimeRange.ALL)
             domainCoins.forEach { coin ->
                 selectedTimeRanges.forEach { range ->
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
                             getCoinMarketChart(coin.id, range, "usd")
-                        } catch (_: Exception) { /* Ignore errors for prefetch */ }
+                        } catch (_: Exception) { /* Ignore errors for prefetch */
+                        }
                     }
                 }
             }
@@ -111,7 +119,8 @@ class CoinRepositoryImpl @Inject constructor(
         }
 
         // Persistent cache: check DB first
-        val cacheDurationMillis = 60 * 60 * 1000L // 1 hour (adjust to match your other coin data cache duration)
+        val cacheDurationMillis =
+            60 * 60 * 1000L // 1 hour (adjust to match your other coin data cache duration)
         val now = System.currentTimeMillis()
         val chartEntity = coinDao.getCoinChart(coinId, timeRange.name)
         if (chartEntity != null && (now - chartEntity.timestamp) < cacheDurationMillis) {
@@ -152,4 +161,100 @@ class CoinRepositoryImpl @Inject constructor(
             emptyList()
         }
     }
+
+    // Add to existing CoinRepositoryImpl class
+    override suspend fun createPriceAlert(alert: PriceAlert): Result<Unit> {
+        return try {
+            val entity = PriceAlertEntity(
+                id = alert.id,
+                coinId = alert.coinId,
+                coinName = alert.coinName,
+                coinSymbol = alert.coinSymbol,
+                coinImageUrl = alert.coinImageUrl,
+                targetPrice = alert.targetPrice,
+                alertType = alert.alertType.name,
+                isActive = alert.isActive,
+                isTriggered = alert.isTriggered,
+                createdAt = alert.createdAt,
+                triggeredAt = alert.triggeredAt
+            )
+            priceAlertDao.insertAlert(entity)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun deletePriceAlert(alertId: PriceAlertEntity): Result<Unit> {
+        return try {
+            priceAlertDao.deleteAlert(alertId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+
+    override fun getAllPriceAlerts(): Flow<Result<List<PriceAlert>>> {
+        return priceAlertDao.getAllAlerts()
+            .map { entities ->
+                try {
+                    val alerts = entities.map { entity ->
+                        PriceAlert(
+                            id = entity.id,
+                            coinId = entity.coinId,
+                            coinName = entity.coinName,
+                            coinSymbol = entity.coinSymbol,
+                            coinImageUrl = entity.coinImageUrl,
+                            targetPrice = entity.targetPrice,
+                            alertType = PriceAlertType.valueOf(entity.alertType),
+                            isActive = entity.isActive,
+                            isTriggered = entity.isTriggered,
+                            createdAt = entity.createdAt,
+                            triggeredAt = entity.triggeredAt
+                        )
+                    }
+                    Result.success(alerts)
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+            }
+    }
+
+    override fun getActiveAlertsForCoin(coinId: String): Flow<Result<List<PriceAlert>>> {
+        return priceAlertDao.getActiveAlertsForCoin(coinId)
+            .map { entities ->
+                try {
+                    val alerts = entities.map { entity ->
+                        PriceAlert(
+                            id = entity.id,
+                            coinId = entity.coinId,
+                            coinName = entity.coinName,
+                            coinSymbol = entity.coinSymbol,
+                            coinImageUrl = entity.coinImageUrl,
+                            targetPrice = entity.targetPrice,
+                            alertType = PriceAlertType.valueOf(entity.alertType),
+                            isActive = entity.isActive,
+                            isTriggered = entity.isTriggered,
+                            createdAt = entity.createdAt,
+                            triggeredAt = entity.triggeredAt
+                        )
+                    }
+                    Result.success(alerts)
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+            }
+    }
+
+    override suspend fun markAlertAsTriggered(alertId: String, triggeredAt: Long): Result<Unit> {
+        return try {
+            priceAlertDao.markAlertAsTriggered(alertId, triggeredAt)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+
 }

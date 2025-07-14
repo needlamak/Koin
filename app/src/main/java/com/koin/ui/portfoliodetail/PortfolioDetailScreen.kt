@@ -1,4 +1,5 @@
 package com.koin.ui.portfoliodetail
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -25,26 +26,28 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddAlert
+import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,10 +62,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.koin.data.coin.TimeRange
 import com.koin.ui.coindetail.EnhancedPriceChart
+import com.koin.ui.pricealert.CreatePriceAlertDialog
+import com.koin.ui.pricealert.PriceAlertViewModel
+
+import com.koin.domain.model.Coin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,12 +78,16 @@ fun PortfolioDetailScreen(
     onEvent: (PortfolioDetailUiEvent) -> Unit,
     onBackClick: () -> Unit,
     navigateToTransactionSuccess: () -> Unit,
+    priceAlertViewModel: PriceAlertViewModel = hiltViewModel(),
     modifier: Modifier = Modifier
 ) {
     val portfolioCoin = state.portfolioCoin
     val selectedTimeRange = state.selectedTimeRange
     val scrollState = rememberScrollState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val priceAlertState by priceAlertViewModel.uiState.collectAsState()
+    val createAlertState by priceAlertViewModel.createAlertState.collectAsState()
 
     var showSellSuccessSheet by remember { mutableStateOf(false) }
 
@@ -89,15 +100,11 @@ fun PortfolioDetailScreen(
 
     LaunchedEffect(state.error) {
         state.error?.let { errorMessage ->
-            // Show Snackbar for error
-            // You might need a SnackbarHostState passed from the parent Scaffold
-            // For now, let's assume a simple toast or log
             println("Error: $errorMessage")
             onEvent(PortfolioDetailUiEvent.ClearToast) // Clear the error state
         }
     }
 
-    // Calculate scroll progress for animations
     val scrollProgress = (scrollState.value / 500f).coerceIn(0f, 1f)
     val headerAlpha = 1f - scrollProgress
     val topBarContentAlpha = scrollProgress
@@ -107,6 +114,17 @@ fun PortfolioDetailScreen(
     }
 
     val priceHistory = state.historicalData.map { it.price }
+
+    if (priceAlertState.showCreateDialog && priceAlertState.selectedCoin != null) {
+        CreatePriceAlertDialog(
+            coin = priceAlertState.selectedCoin!!,
+            createAlertState = createAlertState,
+            onDismiss = { priceAlertViewModel.hideCreateAlertDialog() },
+            onTargetPriceChange = { priceAlertViewModel.updateTargetPrice(it) },
+            onAlertTypeChange = { priceAlertViewModel.updateAlertType(it) },
+            onCreateAlert = { priceAlertViewModel.createAlert() }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -161,7 +179,52 @@ fun PortfolioDetailScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            portfolioCoin?.let {
+                HorizontalFloatingToolBar(
+                    onSellClick = {
+                        onEvent(
+                            PortfolioDetailUiEvent.SellCoin(
+                                coinId = it.coinId,
+                                quantity = it.quantity,
+                                pricePerCoin = it.currentPrice
+                            )
+                        )
+                        navigateToTransactionSuccess()
+                    },
+                    onCreatePriceAlertClick = {
+                        val coin = Coin(
+                            id = it.coinId,
+                            symbol = it.coinSymbol,
+                            name = it.coinName,
+                            imageUrl = it.coinImageUrl,
+                            currentPrice = it.currentPrice,
+                            marketCap = 0,
+                            marketCapRank = 0,
+                            priceChange24h = 0.0,
+                            priceChangePercentage24h = 0.0,
+                            priceChangePercentage1h = 0.0,
+                            priceChangePercentage7d = 0.0,
+                            priceChangePercentage30d = 0.0,
+                            sparklineData = null,
+                            high24h = 0.0,
+                            low24h = 0.0,
+                            totalVolume = 0.0,
+                            circulatingSupply = 0.0,
+                            totalSupply = 0.0,
+                            maxSupply = 0.0,
+                            ath = 0.0,
+                            athDate = "",
+                            atl = 0.0,
+                            atlDate = ""
+                        )
+                        priceAlertViewModel.showCreateAlertDialog(coin)
+                    }
+                )
+            }
+        },
+        floatingActionButtonPosition = FabPosition.Center
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = state.isLoading || state.isLoadingHistoricalData, // Assuming isLoading also covers refreshing
@@ -355,36 +418,42 @@ fun PortfolioDetailScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             lineHeight = 20.sp
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Sell Button
-                        Button(
-                            onClick = {
-                                onEvent(
-                                    PortfolioDetailUiEvent.SellCoin(
-                                        coinId = portfolioCoin.coinId,
-                                        quantity = portfolioCoin.quantity,
-                                        pricePerCoin = portfolioCoin.currentPrice
-                                    )
-                                )
-                                navigateToTransactionSuccess()
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text("Sell")
-                        }
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(90.dp)) // Add space for the floating action button
                     }
                 }
             }
         }
+    }
+}
 
-        
+@Composable
+fun HorizontalFloatingToolBar(
+    onSellClick: () -> Unit,
+    onCreatePriceAlertClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.extraLarge,
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = onCreatePriceAlertClick) {
+                Icon(Icons.Default.AddAlert, contentDescription = "Create Price Alert")
+                Spacer(Modifier.width(8.dp))
+                Text("Price Alert")
+            }
+
+            TextButton(onClick = onSellClick) {
+                Icon(Icons.Default.Sell, contentDescription = "Sell", tint = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.width(8.dp))
+                Text("Sell", color = MaterialTheme.colorScheme.error)
+            }
+        }
     }
 }
 

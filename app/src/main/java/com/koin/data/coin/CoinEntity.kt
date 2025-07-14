@@ -18,8 +18,7 @@ data class CoinEntity(
     val priceChangePercentage1h: Double?,
     val priceChangePercentage7d: Double?,
     val priceChangePercentage30d: Double?,
-    @ColumnInfo(name = "sparkline_data")
-    val sparklineData: List<Double>?,
+    @ColumnInfo(name = "sparkline_data") val sparklineData: List<Double>?,
     val high24h: Double?,
     val low24h: Double?,
     val totalVolume: Double?,

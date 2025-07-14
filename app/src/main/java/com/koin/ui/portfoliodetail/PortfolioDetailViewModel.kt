@@ -51,6 +51,12 @@ class PortfolioDetailViewModel @Inject constructor(
             is PortfolioDetailUiEvent.SellCoin -> {
                 sellCoin(event.coinId, event.quantity, event.pricePerCoin)
             }
+
+            PortfolioDetailUiEvent.CreateAlert -> TODO()
+            PortfolioDetailUiEvent.HideCreateAlertDialog -> TODO()
+            is PortfolioDetailUiEvent.ShowCreateAlertDialog -> TODO()
+            is PortfolioDetailUiEvent.UpdateAlertType -> TODO()
+            is PortfolioDetailUiEvent.UpdateTargetPrice -> TODO()
         }
     }
 
