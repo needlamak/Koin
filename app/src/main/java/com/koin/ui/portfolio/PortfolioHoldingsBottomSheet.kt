@@ -31,11 +31,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.koin.domain.portfolio.PortfolioHolding
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.filled.Sell
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.wear.compose.material.ExperimentalWearMaterialApi
+import androidx.wear.compose.material.FractionalThreshold
+import androidx.wear.compose.material.rememberSwipeableState
+import androidx.wear.compose.material.swipeable
+import kotlin.math.roundToInt
 
 @Composable
 fun PortfolioHoldingsBottomSheet(
     holdings: List<PortfolioHolding>,
     onBuyCoin: (String) -> Unit,
+    onSellCoin: (String) -> Unit,
     onPortfolioCoinClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -63,6 +75,7 @@ fun PortfolioHoldingsBottomSheet(
                     PortfolioHoldingItem(
                         holding = holding,
                         onBuyMore = { onBuyCoin(holding.coinId) },
+                        onSell = { onSellCoin(holding.coinId) },
                         onPortfolioCoinClick = { onPortfolioCoinClick(holding.coinId) },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -74,50 +87,97 @@ fun PortfolioHoldingsBottomSheet(
     }
 }
 
+@OptIn(ExperimentalWearMaterialApi::class)
 @Composable
 private fun PortfolioHoldingItem(
     holding: PortfolioHolding,
     onBuyMore: () -> Unit,
+    onSell: () -> Unit,
     onPortfolioCoinClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = modifier.clickable { onPortfolioCoinClick(holding.coinId) }
-    ) {
+    val swipeableState = rememberSwipeableState(initialValue = 0)
+    val sizePx = with(LocalDensity.current) { 140.dp.toPx() }
+    val anchors = mapOf(0f to 0, -sizePx to 1)
+
+    Box(modifier = modifier) {
+        // Background with sell button
         Row(
-            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .padding(8.dp)
+                .fillMaxWidth()
                 .height(72.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onBuyMore,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Buy more",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            IconButton(
+                onClick = onSell,
+                modifier = Modifier.size(80.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Sell,
+                    contentDescription = "Sell Coin",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+
+        // Main card content
+        Card(
+            modifier = Modifier
+                .offset { IntOffset(swipeableState.offset.value.roundToInt(), 0) }
+                .swipeable(
+                    state = swipeableState,
+                    anchors = anchors,
+                    thresholds = { _, _ -> FractionalThreshold(0.3f) },
+                    orientation = Orientation.Horizontal
+                )
+                .clickable { onPortfolioCoinClick(holding.coinId) },
+
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .padding(8.dp)
+                    .height(72.dp),
             ) {
-                AsyncImage(
-                    model = holding.coinImageUrl,
-                    contentDescription = "${holding.coinName} logo",
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AsyncImage(
+                        model = holding.coinImageUrl,
+                        contentDescription = "${holding.coinName} logo",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                    )
 
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ){
-                    Text(
-                        text = holding.coinName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = holding.coinSymbol.uppercase(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = holding.coinName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = holding.coinSymbol.uppercase(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
                 }
-
-            }
 //            Column(
 //                //verticalArrangement = Arrangement.spacedBy(4.dp)
 //            ) {
@@ -131,16 +191,6 @@ private fun PortfolioHoldingItem(
                     label = "Current Price",
                     value = holding.formattedCurrentPrice,
                     modifier = Modifier.weight(1f)
-                )
-            //}
-            IconButton(
-                onClick = onBuyMore,
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Buy more",
-                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }

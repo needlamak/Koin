@@ -166,10 +166,18 @@ fun CoinDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
                     }
                 },
                 actions = {
@@ -180,23 +188,31 @@ fun CoinDetailScreen(
                             onEvent(CoinDetailUiEvent.ToggleWatchlist)
                         }
                     ) {
-                        Icon(
-                            imageVector = if (state.isInWatchlist) {
-                                Icons.Filled.Star
-                            } else {
-                                Icons.Outlined.StarBorder
-                            },
-                            contentDescription = if (state.isInWatchlist) {
-                                "Remove from watchlist"
-                            } else {
-                                "Add to watchlist"
-                            },
-                            tint = if (state.isInWatchlist) {
-                                Color(0xFFFFD700) // Gold color for filled star
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            }
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (state.isInWatchlist) {
+                                    Icons.Filled.Star
+                                } else {
+                                    Icons.Outlined.StarBorder
+                                },
+                                contentDescription = if (state.isInWatchlist) {
+                                    "Remove from watchlist"
+                                } else {
+                                    "Add to watchlist"
+                                },
+                                tint = if (state.isInWatchlist) {
+                                    Color(0xFFFFD700) // Gold color for filled star
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                }
+                            )
+                        }
                     }
                 })
         },

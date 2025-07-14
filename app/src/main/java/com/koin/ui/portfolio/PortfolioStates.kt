@@ -14,7 +14,9 @@ data class PortfolioUiState(
     val showBottomSheet: Boolean = false,
     val selectedTimeRange: TimeRange = TimeRange.ALL,
     val showBuySuccessBottomSheet: Boolean = false,
-    val buyTransactionDetails: BuyTransactionDetails? = null
+    val buyTransactionDetails: BuyTransactionDetails? = null,
+    val showSellDialog: Boolean = false,
+    val selectedCoinForSell: String? = null
 )
 
 sealed class PortfolioUiEvent {
@@ -34,4 +36,5 @@ sealed class PortfolioUiEvent {
         val pricePerCoin: Double
     ) : PortfolioUiEvent()
     data class SelectTimeRange(val timeRange: TimeRange) : PortfolioUiEvent()
+    data class ShowSellDialog(val coinId: String) : PortfolioUiEvent()
 }

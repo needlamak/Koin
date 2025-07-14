@@ -50,6 +50,8 @@ class PortfolioViewModel @Inject constructor(
     private val _selectedTimeRange = MutableStateFlow(TimeRange.ALL)
     private val _showBuySuccessBottomSheet = MutableStateFlow(false)
     private val _buyTransactionDetails = MutableStateFlow<BuyTransactionDetails?>(null)
+    private val _showSellDialog = MutableStateFlow(false)
+    private val _selectedCoinForSell = MutableStateFlow<String?>(null)
 
     // Create the balance flow
     private val balanceFlow = flow {
@@ -68,7 +70,9 @@ class PortfolioViewModel @Inject constructor(
         _showBottomSheet,
         _selectedTimeRange,
         _showBuySuccessBottomSheet,
-        _buyTransactionDetails
+        _buyTransactionDetails,
+        _showSellDialog,
+        _selectedCoinForSell
     ) { flows ->
         val holdings = flows[0] as List<PortfolioHolding>
         val balance = flows[1] as PortfolioBalance?
@@ -81,6 +85,8 @@ class PortfolioViewModel @Inject constructor(
         val selectedTimeRange = flows[8] as TimeRange
         val showBuySuccessBottomSheet = flows[9] as Boolean
         val buyTransactionDetails = flows[10] as BuyTransactionDetails?
+        val showSellDialog = flows[11] as Boolean
+        val selectedCoinForSell = flows[12] as String?
 
         val portfolio = Portfolio(
             balance = balance?.balance ?: Portfolio.Companion.INITIAL_BALANCE,
@@ -98,7 +104,9 @@ class PortfolioViewModel @Inject constructor(
             showBottomSheet = showBottomSheet,
             selectedTimeRange = selectedTimeRange,
             showBuySuccessBottomSheet = showBuySuccessBottomSheet,
-            buyTransactionDetails = buyTransactionDetails
+            buyTransactionDetails = buyTransactionDetails,
+            showSellDialog = showSellDialog,
+            selectedCoinForSell = selectedCoinForSell
         )
 
         emit(uiState)
@@ -121,6 +129,11 @@ class PortfolioViewModel @Inject constructor(
             is PortfolioUiEvent.ShowBuyDialog -> {
                 _selectedCoinForBuy.value = event.coinId
                 _showBuyDialog.value = true
+            }
+
+            is PortfolioUiEvent.ShowSellDialog -> {
+                _selectedCoinForSell.value = event.coinId
+                _showSellDialog.value = true
             }
 
             is PortfolioUiEvent.BuyCoin -> buyCoin(

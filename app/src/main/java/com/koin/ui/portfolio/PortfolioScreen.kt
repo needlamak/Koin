@@ -72,6 +72,19 @@ import com.koin.R
 import com.koin.navigation.Screen
 import com.koin.ui.portfoliodetail.SellSuccessBottomSheet
 import com.koin.ui.portfoliodetail.SellTransactionDetails
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.wear.compose.material.ExperimentalWearMaterialApi
+import androidx.wear.compose.material.FractionalThreshold
+import androidx.wear.compose.material.rememberSwipeableState
+import androidx.wear.compose.material.swipeable
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,6 +123,7 @@ fun PortfolioScreen(
                 PortfolioHoldingsBottomSheet(
                     holdings = state.portfolio.holdings,
                     onBuyCoin = { coinId -> onEvent(PortfolioUiEvent.ShowBuyDialog(coinId)) },
+                    onSellCoin = { coinId -> onEvent(PortfolioUiEvent.ShowSellDialog(coinId)) },
                     onPortfolioCoinClick = onPortfolioCoinClick
                 )
             },
@@ -305,14 +319,23 @@ private fun PortfolioTopBar(
                     },
                     modifier = Modifier.align(Alignment.CenterVertically)
                 ) {
-                    IconButton(onClick = { navController.navigate(Screen.Notification.route) }) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifications"
-                        )
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(onClick = { navController.navigate(Screen.Notification.route) }) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications"
+                            )
+                        }
                     }
                 }
 
+                Spacer(Modifier.width(8.dp))
                 // Menu button
                 var showMenu by remember { mutableStateOf(false) }
                 Box(

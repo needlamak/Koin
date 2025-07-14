@@ -145,7 +145,7 @@ fun CoinListScreen(
             }
     }
 
-    
+
     val sheetState = rememberModalBottomSheetState()
 
     if (state.showBuyDialog) {
@@ -280,6 +280,7 @@ fun CoinListScreen(
                                 onClick = {
                                     selectedSortType =
                                         if (selectedSortType == SortType.NAME_ASC) SortType.NAME_DESC else SortType.NAME_ASC
+                                    onEvent(CoinListUiEvent.UpdateFilters(sortType = selectedSortType))
                                 }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -293,6 +294,7 @@ fun CoinListScreen(
                                 onClick = {
                                     selectedSortType =
                                         if (selectedSortType == SortType.PRICE_ASC) SortType.PRICE_DESC else SortType.PRICE_ASC
+                                    onEvent(CoinListUiEvent.UpdateFilters(sortType = selectedSortType))
                                 }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -306,6 +308,7 @@ fun CoinListScreen(
                                 onClick = {
                                     selectedSortType =
                                         if (selectedSortType == SortType.CHANGE_ASC) SortType.CHANGE_DESC else SortType.CHANGE_ASC
+                                    onEvent(CoinListUiEvent.UpdateFilters(sortType = selectedSortType))
                                 }
                             )
                         }
@@ -317,7 +320,10 @@ fun CoinListScreen(
                         ) {
                             Checkbox(
                                 checked = showOnlyPositiveChange,
-                                onCheckedChange = { showOnlyPositiveChange = it }
+                                onCheckedChange = {
+                                    showOnlyPositiveChange = it
+                                    onEvent(CoinListUiEvent.UpdateFilters(showOnlyPositiveChange = it))
+                                }
                             )
                             Text(
                                 "Show only positive change",
