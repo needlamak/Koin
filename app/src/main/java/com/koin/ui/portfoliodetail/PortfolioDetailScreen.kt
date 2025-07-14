@@ -66,11 +66,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.koin.data.coin.TimeRange
+import com.koin.domain.model.Coin
 import com.koin.ui.coindetail.EnhancedPriceChart
 import com.koin.ui.pricealert.CreatePriceAlertDialog
 import com.koin.ui.pricealert.PriceAlertViewModel
-
-import com.koin.domain.model.Coin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -326,18 +325,9 @@ fun PortfolioDetailScreen(
                                     }
 
                                     priceHistory.isNotEmpty() -> {
-                                        val isPositive = priceHistory.last() > priceHistory.first()
                                         EnhancedPriceChart(
                                             prices = priceHistory,
                                             modifier = Modifier.fillMaxSize(),
-                                            lineColor = if (isPositive) Color.Green else Color.Red,
-                                            gradientColors = listOf(
-                                                if (isPositive)
-                                                    Color.Green.copy(alpha = 0.3f)
-                                                else
-                                                    Color.Red.copy(alpha = 0.3f),
-                                                Color.Transparent
-                                            )
                                         )
                                     }
 
@@ -385,7 +375,10 @@ fun PortfolioDetailScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             StatItem("Quantity", portfolioCoin.formattedQuantity)
-                            StatItem("Average Purchase Price", portfolioCoin.formattedAveragePurchasePrice)
+                            StatItem(
+                                "Average Purchase Price",
+                                portfolioCoin.formattedAveragePurchasePrice
+                            )
                             StatItem("Total Cost Basis", portfolioCoin.formattedTotalCostBasis)
                             StatItem("Current Price", portfolioCoin.formattedCurrentPrice)
                         }
@@ -406,7 +399,10 @@ fun PortfolioDetailScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             StatItem("Unrealized PnL", portfolioCoin.formattedUnrealizedPnL)
-                            StatItem("Unrealized PnL %", portfolioCoin.formattedUnrealizedPnLPercentage)
+                            StatItem(
+                                "Unrealized PnL %",
+                                portfolioCoin.formattedUnrealizedPnLPercentage
+                            )
                         }
                         Spacer(modifier = Modifier.height(24.dp))
 
@@ -459,7 +455,11 @@ fun HorizontalFloatingToolBar(
             }
 
             TextButton(onClick = onSellClick) {
-                Icon(Icons.Default.Sell, contentDescription = "Sell", tint = MaterialTheme.colorScheme.error)
+                Icon(
+                    Icons.Default.Sell,
+                    contentDescription = "Sell",
+                    tint = MaterialTheme.colorScheme.error
+                )
                 Spacer(Modifier.width(8.dp))
                 Text("Sell", color = MaterialTheme.colorScheme.error)
             }

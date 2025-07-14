@@ -71,9 +71,6 @@ import com.koin.ui.pricealert.PriceAlertViewModel
 import java.text.NumberFormat
 import java.util.Locale
 
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-
 @OptIn(ExperimentalMaterial3Api::class) // Add ExperimentalMaterialApi
 @Composable
 fun CoinDetailScreen(
@@ -178,9 +175,9 @@ fun CoinDetailScreen(
                 actions = {
                     // Star button for watchlist
                     IconButton(
-                        onClick = { 
+                        onClick = {
                             hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onEvent(CoinDetailUiEvent.ToggleWatchlist) 
+                            onEvent(CoinDetailUiEvent.ToggleWatchlist)
                         }
                     ) {
                         Icon(
@@ -206,7 +203,7 @@ fun CoinDetailScreen(
         floatingActionButton = {
             coin?.let {
                 HorizontalFloatingToolBar(
-                    onBuyClick = { 
+                    onBuyClick = {
                         // TODO: Navigate to Buy Screen
                     },
                     onCreatePriceAlertClick = {
@@ -321,33 +318,16 @@ fun CoinDetailScreen(
                                     }
 
                                     priceHistory.isNotEmpty() -> {
-                                        val isPositive = priceHistory.last() > priceHistory.first()
                                         EnhancedPriceChart(
                                             prices = priceHistory,
-                                            modifier = Modifier.fillMaxSize(),
-                                            lineColor = if (isPositive) Color.Green else Color.Red,
-                                            gradientColors = listOf(
-                                                if (isPositive)
-                                                    Color.Green.copy(alpha = 0.3f)
-                                                else
-                                                    Color.Red.copy(alpha = 0.3f),
-                                                Color.Transparent
-                                            )
+                                            modifier = Modifier.fillMaxSize()
                                         )
                                     }
 
                                     !coin.sparklineData.isNullOrEmpty() -> {
                                         EnhancedPriceChart(
                                             prices = coin.sparklineData,
-                                            modifier = Modifier.fillMaxSize(),
-                                            lineColor = if (coin.isPositive24h) Color.Green else Color.Red,
-                                            gradientColors = listOf(
-                                                if (coin.isPositive24h)
-                                                    Color.Green.copy(alpha = 0.2f)
-                                                else
-                                                    Color.Red.copy(alpha = 0.2f),
-                                                Color.Transparent
-                                            )
+                                            modifier = Modifier.fillMaxSize()
                                         )
                                     }
 

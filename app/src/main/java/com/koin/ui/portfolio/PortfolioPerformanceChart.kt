@@ -28,7 +28,6 @@ import com.koin.data.coin.TimeRange
 import com.koin.domain.portfolio.Portfolio
 import java.text.NumberFormat
 import java.util.Locale
-
 @Composable
 fun PortfolioPerformanceChart(
     portfolio: Portfolio,
@@ -53,6 +52,7 @@ fun PortfolioPerformanceChart(
 
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
     var showTooltip by remember { mutableStateOf(false) }
+    var isDragging by remember { mutableStateOf(false) }
 
     // Animation for line drawing
     val animationProgress by animateFloatAsState(
@@ -68,19 +68,19 @@ fun PortfolioPerformanceChart(
         label = "gradient_animation"
     )
 
-    // Determine line color based on performance
-    val performanceLineColor = if (portfolio.isPositivePerformance) Color.Green else Color.Red
-    val performanceGradientColors = if (portfolio.isPositivePerformance) {
-        listOf(
-            Color.Green.copy(alpha = 0.3f),
-            Color.Green.copy(alpha = 0.1f)
-        )
-    } else {
-        listOf(
-            Color.Red.copy(alpha = 0.3f),
-            Color.Red.copy(alpha = 0.1f)
-        )
-    }
+    // Smooth pointer animation
+    val pointerAnimationProgress by animateFloatAsState(
+        targetValue = if (showTooltip) 1f else 0f,
+        animationSpec = tween(300, easing = EaseOutCubic),
+        label = "pointer_animation"
+    )
+
+    // Fixed blue color scheme
+    val chartLineColor = Color.Blue
+    val chartGradientColors = listOf(
+        Color.Blue.copy(alpha = 0.3f),
+        Color.Blue.copy(alpha = 0.1f)
+    )
 
     val pointerModifier = Modifier.pointerInput(portfolioHistory) {
         detectTapGestures(
@@ -95,6 +95,7 @@ fun PortfolioPerformanceChart(
 
         detectDragGestures(
             onDragStart = { position ->
+                isDragging = true
                 showTooltip = true
                 val width = size.width
                 val step = width / (portfolioHistory.size - 1).coerceAtLeast(1)
@@ -102,10 +103,11 @@ fun PortfolioPerformanceChart(
                 selectedIndex = index
             },
             onDragEnd = {
-                showTooltip = false
-                selectedIndex = null
+                isDragging = false
+                // Keep tooltip visible after drag ends
             },
             onDragCancel = {
+                isDragging = false
                 showTooltip = false
                 selectedIndex = null
             }
@@ -138,6 +140,36 @@ fun PortfolioPerformanceChart(
         val width = size.width
         val height = size.height
         val step = width / (portfolioHistory.size - 1).coerceAtLeast(1)
+
+        // Draw dotted grid lines
+        val gridColor = Color.Gray.copy(alpha = 0.3f)
+        val dottedPathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+            floatArrayOf(4f, 8f)
+        )
+
+        // Horizontal dotted grid lines
+        for (i in 1..4) {
+            val y = height * i / 5
+            drawLine(
+                color = gridColor,
+                start = Offset(0f, y),
+                end = Offset(width, y),
+                strokeWidth = 1.dp.toPx(),
+                pathEffect = dottedPathEffect
+            )
+        }
+
+        // Vertical dotted grid lines
+        for (i in 1..4) {
+            val x = width * i / 5
+            drawLine(
+                color = gridColor,
+                start = Offset(x, 0f),
+                end = Offset(x, height),
+                strokeWidth = 1.dp.toPx(),
+                pathEffect = dottedPathEffect
+            )
+        }
 
         // Create path for the portfolio value line
         val linePath = androidx.compose.ui.graphics.Path().apply {
@@ -187,28 +219,16 @@ fun PortfolioPerformanceChart(
         drawPath(
             path = gradientPath,
             brush = Brush.verticalGradient(
-                colors = performanceGradientColors,
+                colors = chartGradientColors,
                 startY = 0f,
                 endY = height
             )
         )
 
-        // Draw grid lines
-        val gridColor = Color.Gray.copy(alpha = 0.2f)
-        for (i in 1..4) {
-            val y = height * i / 5
-            drawLine(
-                color = gridColor,
-                start = Offset(0f, y),
-                end = Offset(width, y),
-                strokeWidth = 1.dp.toPx()
-            )
-        }
-
-        // Draw portfolio value line with enhanced styling
+        // Draw portfolio value line (single color, no glow)
         drawPath(
             path = linePath,
-            color = performanceLineColor,
+            color = chartLineColor,
             style = Stroke(
                 width = 3.dp.toPx(),
                 cap = StrokeCap.Round,
@@ -216,18 +236,7 @@ fun PortfolioPerformanceChart(
             )
         )
 
-        // Draw glow effect for the line
-        drawPath(
-            path = linePath,
-            color = performanceLineColor.copy(alpha = 0.3f),
-            style = Stroke(
-                width = 8.dp.toPx(),
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round
-            )
-        )
-
-        // Draw selected point with enhanced styling
+        // Draw selected point with smooth animation
         selectedIndex?.let { index ->
             if (index in portfolioHistory.indices) {
                 val x = index * step
@@ -237,28 +246,43 @@ fun PortfolioPerformanceChart(
                     height / 2
                 }
 
-                // Draw outer glow
+                // Animated pointer size
+                val pointerRadius = 8.dp.toPx() * pointerAnimationProgress
+                val outerRadius = 12.dp.toPx() * pointerAnimationProgress
+
+                // Draw outer circle with subtle animation
                 drawCircle(
-                    color = performanceLineColor.copy(alpha = 0.3f),
-                    radius = 16.dp.toPx(),
+                    color = chartLineColor.copy(alpha = 0.2f * pointerAnimationProgress),
+                    radius = outerRadius,
                     center = Offset(x, y)
                 )
 
                 // Draw main point
                 drawCircle(
-                    color = performanceLineColor,
-                    radius = 8.dp.toPx(),
+                    color = chartLineColor,
+                    radius = pointerRadius,
                     center = Offset(x, y)
                 )
 
                 // Draw inner highlight
                 drawCircle(
-                    color = Color.White.copy(alpha = 0.8f),
-                    radius = 4.dp.toPx(),
+                    color = Color.White.copy(alpha = 0.9f * pointerAnimationProgress),
+                    radius = pointerRadius * 0.5f,
                     center = Offset(x, y)
                 )
 
-                // Draw value tooltip
+                // Draw vertical line from point to bottom
+                drawLine(
+                    color = chartLineColor.copy(alpha = 0.3f * pointerAnimationProgress),
+                    start = Offset(x, y),
+                    end = Offset(x, height),
+                    strokeWidth = 1.dp.toPx(),
+                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                        floatArrayOf(6f, 6f)
+                    )
+                )
+
+                // Draw value tooltip with smooth animation
                 if (showTooltip) {
                     drawContext.canvas.nativeCanvas.apply {
                         val valueText = NumberFormat.getCurrencyInstance(Locale.US)
@@ -281,15 +305,19 @@ fun PortfolioPerformanceChart(
                         val tooltipX = (x - tooltipWidth / 2).coerceIn(0f, width - tooltipWidth)
                         val tooltipY = (y - tooltipHeight - 16.dp.toPx()).coerceAtLeast(0f)
 
+                        // Animate tooltip appearance
+                        val tooltipAlpha = pointerAnimationProgress
+
                         // Draw tooltip background
                         drawRoundRect(
-                            color = Color.Black.copy(alpha = 0.8f),
+                            color = Color.Black.copy(alpha = 0.8f * tooltipAlpha),
                             topLeft = Offset(tooltipX, tooltipY),
                             size = Size(tooltipWidth, tooltipHeight),
                             cornerRadius = CornerRadius(8.dp.toPx())
                         )
 
                         // Draw tooltip text
+                        textPaint.alpha = (255 * tooltipAlpha).toInt()
                         drawText(
                             valueText,
                             tooltipX + tooltipWidth / 2,
@@ -301,7 +329,7 @@ fun PortfolioPerformanceChart(
             }
         }
 
-        // Draw initial balance line for reference
+        // Draw initial balance line for reference (dotted)
         if (valueRange > 0) {
             val initialBalanceY =
                 height - ((Portfolio.INITIAL_BALANCE - minValue) / valueRange * height).toFloat()
@@ -311,10 +339,7 @@ fun PortfolioPerformanceChart(
                 end = Offset(width, initialBalanceY),
                 strokeWidth = 1.dp.toPx(),
                 pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
-                    floatArrayOf(
-                        10f,
-                        10f
-                    )
+                    floatArrayOf(4f, 8f)
                 )
             )
         }

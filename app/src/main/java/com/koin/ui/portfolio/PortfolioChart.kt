@@ -39,7 +39,7 @@ fun PortfolioChart(
                 selectedTimeRange = selectedTimeRange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp) // this is the only fixed height
+                    .height(250.dp) // this is the only fixed height
             )
             TimeRangeSelector(
                 selectedTimeRange = selectedTimeRange,

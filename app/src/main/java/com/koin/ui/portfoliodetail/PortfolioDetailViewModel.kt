@@ -30,7 +30,6 @@ class PortfolioDetailViewModel @Inject constructor(
     
 
     init {
-        loadHistoricalData()
         loadPortfolioCoin()
     }
 
@@ -89,6 +88,9 @@ class PortfolioDetailViewModel @Inject constructor(
                 .collectLatest { holdings ->
                     val portfolioCoin = holdings.find { it.coinId == coinId }
                     _uiState.update { it.copy(portfolioCoin = portfolioCoin, isLoading = false, error = null) }
+                    if (portfolioCoin != null) {
+                        loadHistoricalData()
+                    }
                 }
         }
     }

@@ -1,7 +1,9 @@
 package com.koin.ui.coindetail
 
 import androidx.compose.animation.core.EaseOutCubic
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -18,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -30,7 +33,7 @@ import java.util.Locale
 fun EnhancedPriceChart(
     prices: List<Double>,
     modifier: Modifier = Modifier,
-    lineColor: Color = Color.Black,
+    lineColor: Color = Color.Blue,
     gradientColors: List<Color> = listOf(
         Color.Blue.copy(alpha = 0.3f),
         Color.Blue.copy(alpha = 0.1f)
@@ -57,75 +60,43 @@ fun EnhancedPriceChart(
         label = "gradient_animation"
     )
 
-    val pointerModifier = Modifier.pointerInput(prices) {
-        // This handles single taps
-        detectTapGestures(
-            onTap = { offset ->
-                val width = size.width
-                val step = width / (prices.size - 1).coerceAtLeast(1)
-                val index = (offset.x / step).toInt().coerceIn(0, prices.lastIndex)
-                selectedIndex = index
-                showTooltip = true
-            }
-        )
+    // Animation for selected point
+    val selectedPointScale by animateFloatAsState(
+        targetValue = if (selectedIndex != null) 1.2f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "selected_point_scale"
+    )
 
-        // This handles the continuous swipe/drag gesture
+    val pointerModifier = Modifier.pointerInput(prices) {
         detectDragGestures(
             onDragStart = { position ->
-                // Show the tooltip as soon as the drag begins
                 showTooltip = true
-
-                // You can also set the initial point on drag start
                 val width = size.width
                 val step = width / (prices.size - 1).coerceAtLeast(1)
                 val index = (position.x / step).toInt().coerceIn(0, prices.lastIndex)
                 selectedIndex = index
             },
             onDragEnd = {
-                // Hide the tooltip and indicator when the user lifts their finger
-                showTooltip = false
-                selectedIndex = null
+                // Keep the tooltip and selected point visible after drag ends
+                // Remove these lines if you want them to disappear
+                // showTooltip = false
+                // selectedIndex = null
             },
             onDragCancel = {
-                // Also hide on cancellation
                 showTooltip = false
                 selectedIndex = null
             }
-        ) { change, _ -> // This block runs for every pixel the finger moves
+        ) { change, _ ->
             val width = size.width
             val step = width / (prices.size - 1).coerceAtLeast(1)
-
-            // 1. Get the finger's current horizontal position
             val xPosition = change.position.x
-
-            // 2. Convert the position to a data index
             val index = (xPosition / step).toInt().coerceIn(0, prices.lastIndex)
-
-            // 3. Update the state. This triggers a redraw, moving the indicator.
             selectedIndex = index
         }
     }
-
-//    val pointerModifier = Modifier.pointerInput(prices) {
-//        detectTapGestures(
-//            onTap = { offset ->
-//                val width = size.width
-//                val step = width / (prices.size - 1).coerceAtLeast(1)
-//                val index = (offset.x / step).toInt().coerceIn(0, prices.lastIndex)
-//                selectedIndex = index
-//                showTooltip = true
-//            }
-//        )
-//        detectDragGestures(
-//            onDragStart = { showTooltip = true },
-//            onDragEnd = { showTooltip = false }
-//        ) { change, _ ->
-//            val width = size.width
-//            val step = width / (prices.size - 1).coerceAtLeast(1)
-//            val index = (change.position.x / step).toInt().coerceIn(0, prices.lastIndex)
-//            selectedIndex = index
-//        }
-//    }
 
     Canvas(
         modifier = modifier
@@ -138,8 +109,8 @@ fun EnhancedPriceChart(
         val height = size.height
         val step = width / (prices.size - 1).coerceAtLeast(1)
 
-        // Create path for the price line - FIX: Use Compose's Path
-        val linePath = androidx.compose.ui.graphics.Path().apply { // Or just Path() if the android.graphics.Path import is removed
+        // Create path for the price line
+        val linePath = androidx.compose.ui.graphics.Path().apply {
             val animatedSize = (prices.size * animationProgress).toInt().coerceAtLeast(1)
             prices.take(animatedSize).forEachIndexed { index, price ->
                 val x = index * step
@@ -152,7 +123,6 @@ fun EnhancedPriceChart(
                 }
             }
         }
-
 
         // Create path for gradient area (under the line)
         val gradientPath = androidx.compose.ui.graphics.Path().apply {
@@ -185,21 +155,29 @@ fun EnhancedPriceChart(
             )
         )
 
-        // Draw grid lines
-        val gridColor = Color.Gray.copy(alpha = 0.2f)
+        // Draw dotted grid lines
+        val gridColor = Color.Blue.copy(alpha = 0.2f)
+        val dashWidth = 8.dp.toPx()
+        val dashGap = 8.dp.toPx()
+
         for (i in 1..4) {
             val y = height * i / 5
-            drawLine(
-                color = gridColor,
-                start = Offset(0f, y),
-                end = Offset(width, y),
-                strokeWidth = 1.dp.toPx()
-            )
+            var x = 0f
+            while (x < width) {
+                val endX = minOf(x + dashWidth, width)
+                drawLine(
+                    color = gridColor,
+                    start = Offset(x, y),
+                    end = Offset(endX, y),
+                    strokeWidth = 1.dp.toPx()
+                )
+                x += dashWidth + dashGap
+            }
         }
 
-        // Draw price line with enhanced styling - FIX: Removed the invalid cast
+        // Draw price line with smooth styling
         drawPath(
-            path = linePath, // No longer needs casting
+            path = linePath,
             color = lineColor,
             style = Stroke(
                 width = 3.dp.toPx(),
@@ -208,42 +186,43 @@ fun EnhancedPriceChart(
             )
         )
 
-        // Draw glow effect for the line
-        drawPath(
-            path = linePath, // This will also work now
-            color = lineColor.copy(alpha = 0.3f),
-            style = Stroke(
-                width = 8.dp.toPx(),
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round
-            )
-        )
-
-        // Draw selected point with enhanced styling
+        // Draw selected point with enhanced styling and animation
         selectedIndex?.let { index ->
             if (index in prices.indices) {
                 val x = index * step
                 val y = height - ((prices[index] - minPrice) / priceRange * height).toFloat()
 
-                // Draw outer glow
+                // Draw outer ring with pulse animation
+                val pulseRadius = 16.dp.toPx() * selectedPointScale
                 drawCircle(
                     color = lineColor.copy(alpha = 0.3f),
-                    radius = 16.dp.toPx(),
+                    radius = pulseRadius,
                     center = Offset(x, y)
                 )
 
                 // Draw main point
                 drawCircle(
                     color = lineColor,
-                    radius = 8.dp.toPx(),
+                    radius = 8.dp.toPx() * selectedPointScale,
                     center = Offset(x, y)
                 )
 
                 // Draw inner highlight
                 drawCircle(
-                    color = Color.White.copy(alpha = 0.8f),
-                    radius = 4.dp.toPx(),
+                    color = Color.White.copy(alpha = 0.9f),
+                    radius = 4.dp.toPx() * selectedPointScale,
                     center = Offset(x, y)
+                )
+
+                // Draw vertical indicator line
+                drawLine(
+                    color = lineColor.copy(alpha = 0.5f),
+                    start = Offset(x, 0f),
+                    end = Offset(x, height),
+                    strokeWidth = 1.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(
+                        floatArrayOf(dashWidth, dashGap)
+                    )
                 )
 
                 // Draw price tooltip
@@ -268,9 +247,9 @@ fun EnhancedPriceChart(
                         val tooltipX = (x - tooltipWidth / 2).coerceIn(0f, width - tooltipWidth)
                         val tooltipY = (y - tooltipHeight - 16.dp.toPx()).coerceAtLeast(0f)
 
-                        // Draw tooltip background
+                        // Draw tooltip background with blue theme
                         drawRoundRect(
-                            color = Color.Black.copy(alpha = 0.8f),
+                            color = lineColor.copy(alpha = 0.9f),
                             topLeft = Offset(tooltipX, tooltipY),
                             size = Size(tooltipWidth, tooltipHeight),
                             cornerRadius = CornerRadius(8.dp.toPx())
@@ -288,26 +267,36 @@ fun EnhancedPriceChart(
             }
         }
 
-        // Draw min/max indicators
+        // Draw min/max indicators with blue theme
         if (prices.isNotEmpty()) {
             val maxIndex = prices.indexOfFirst { it == maxPrice }
             val minIndex = prices.indexOfFirst { it == minPrice }
 
-            // Max indicator
+            // Max indicator (lighter blue)
             val maxX = maxIndex * step
             val maxY = height - ((maxPrice - minPrice) / priceRange * height).toFloat()
             drawCircle(
-                color = Color.Green.copy(alpha = 0.7f),
+                color = Color.Blue.copy(alpha = 0.8f),
                 radius = 6.dp.toPx(),
                 center = Offset(maxX, maxY)
             )
+            drawCircle(
+                color = Color.White,
+                radius = 3.dp.toPx(),
+                center = Offset(maxX, maxY)
+            )
 
-            // Min indicator
+            // Min indicator (darker blue)
             val minX = minIndex * step
             val minY = height - ((minPrice - minPrice) / priceRange * height).toFloat()
             drawCircle(
-                color = Color.Red.copy(alpha = 0.7f),
+                color = Color.Blue.copy(alpha = 0.6f),
                 radius = 6.dp.toPx(),
+                center = Offset(minX, minY)
+            )
+            drawCircle(
+                color = Color.White,
+                radius = 3.dp.toPx(),
                 center = Offset(minX, minY)
             )
         }
