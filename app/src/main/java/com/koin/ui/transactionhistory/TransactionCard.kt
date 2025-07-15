@@ -22,6 +22,14 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import coil.compose.AsyncImage
+
 @Composable
 fun TransactionCard(
     transaction: Transaction,
@@ -38,6 +46,28 @@ fun TransactionCard(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (!transaction.coinImage.isNullOrEmpty()) {
+                AsyncImage(
+                    model = transaction.coinImage,
+                    contentDescription = "${transaction.coinName} image",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                )
+            } else {
+                Text(
+                    text = transaction.coinSymbol.uppercase(),
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .padding(8.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
             Column(
                 modifier = Modifier.weight(1f)
             ) {

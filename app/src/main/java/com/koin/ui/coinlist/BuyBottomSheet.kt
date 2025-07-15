@@ -21,6 +21,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.koin.domain.model.Coin
 
+import coil.compose.AsyncImage
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+
 @Composable
 fun BuyBottomSheet(
     coin: Coin,
@@ -34,6 +43,28 @@ fun BuyBottomSheet(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        if (coin.imageUrl.isNotEmpty()) {
+            AsyncImage(
+                model = coin.imageUrl,
+                contentDescription = "${coin.name} image",
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+            )
+        } else {
+            Text(
+                text = coin.symbol.uppercase(),
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp),
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+                    .padding(16.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
         Text(text = "Buy ${coin.name}", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(

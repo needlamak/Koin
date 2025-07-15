@@ -29,6 +29,16 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import coil.compose.AsyncImage
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionDetailScreen(
@@ -71,8 +81,31 @@ fun TransactionDetailScreen(
                 else -> {
                     val transaction = uiState.transaction!!
                     Column(
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        if (!transaction.coinImage.isNullOrEmpty()) {
+                            AsyncImage(
+                                model = transaction.coinImage,
+                                contentDescription = "${transaction.coinName} image",
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            Text(
+                                text = transaction.coinSymbol.uppercase(),
+                                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 32.sp),
+                                color = Color.White,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary)
+                                    .padding(16.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Type: ${transaction.type}",
                             style = MaterialTheme.typography.titleLarge,

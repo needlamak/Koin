@@ -185,6 +185,8 @@ class CoinListViewModel @Inject constructor(
                         showBuySuccessBottomSheet = true,
                         buyTransactionDetails = BuyTransactionDetails(
                             coinName = coin.name,
+                            coinSymbol = coin.symbol,
+                            coinImage = coin.imageUrl,
                             quantity = amount,
                             totalPrice = totalPrice
                         ),
@@ -210,7 +212,9 @@ class CoinListViewModel @Inject constructor(
 data class BuyTransactionDetails(
     val coinName: String,
     val quantity: Double,
-    val totalPrice: Double
+    val totalPrice: Double,
+    val coinSymbol: String,
+    val coinImage: String
 )
 
 data class CoinListUiState(

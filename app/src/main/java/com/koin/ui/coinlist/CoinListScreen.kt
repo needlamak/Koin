@@ -168,6 +168,8 @@ fun CoinListScreen(
             state.buyTransactionDetails?.let { details ->
                 BuySuccessBottomSheet(
                     coinName = details.coinName,
+                    coinSymbol = details.coinSymbol,
+                    coinImage = details.coinImage,
                     quantity = details.quantity,
                     totalPrice = details.totalPrice,
                     onDismiss = { onEvent(CoinListUiEvent.HideBuySuccessBottomSheet) }

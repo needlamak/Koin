@@ -230,6 +230,8 @@ fun PortfolioScreen(
             ) {
                 BuySuccessBottomSheet(
                     coinName = state.buyTransactionDetails.coinName,
+                    coinSymbol = state.buyTransactionDetails.coinSymbol,
+                    coinImage = state.buyTransactionDetails.coinImage,
                     quantity = state.buyTransactionDetails.quantity,
                     totalPrice = state.buyTransactionDetails.totalPrice,
                     onDismiss = { onEvent(PortfolioUiEvent.HideBuySuccessBottomSheet) }

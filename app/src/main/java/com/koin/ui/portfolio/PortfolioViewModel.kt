@@ -191,6 +191,8 @@ class PortfolioViewModel @Inject constructor(
                     _error.value = null
                     _buyTransactionDetails.value = BuyTransactionDetails(
                         coinName = coin.name,
+                        coinSymbol = coin.symbol,
+                        coinImage = coin.imageUrl,
                         quantity = quantity,
                         totalPrice = quantity * coin.currentPrice
                     )

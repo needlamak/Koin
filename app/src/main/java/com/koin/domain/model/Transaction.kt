@@ -8,6 +8,7 @@ data class Transaction(
     val pricePerCoin: Double,
     val transactionFee: Double,
     val timestamp: Long,
-    val coinName: String, // Added for display purposes
-    val coinSymbol: String // Added for display purposes
+    val coinName: String,
+    val coinSymbol: String,
+    val coinImage: String?
 )

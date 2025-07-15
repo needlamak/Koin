@@ -26,9 +26,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
+import coil.compose.AsyncImage
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+
 @Composable
 fun BuySuccessBottomSheet(
     coinName: String,
+    coinSymbol: String,
+    coinImage: String?,
     quantity: Double,
     totalPrice: Double,
     onDismiss: () -> Unit
@@ -51,6 +61,44 @@ fun BuySuccessBottomSheet(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+//        if (!coinImage.isNullOrEmpty()) {
+//            AsyncImage(
+//                model = coinImage,
+//                contentDescription = "$coinName image",
+//                modifier = Modifier
+//                    .size(80.dp)
+//                    .clip(CircleShape)
+//            )
+//        } else {
+//            Text(
+//                text = coinSymbol.uppercase(),
+//                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 32.sp),
+//                color = Color.White,
+//                textAlign = TextAlign.Center,
+//                modifier = Modifier
+//                    .size(80.dp)
+//                    .clip(CircleShape)
+//                    .background(MaterialTheme.colorScheme.primary)
+//                    .padding(16.dp)
+//            )
+//        }
+        Row {
+            AsyncImage(
+                model = coinImage,
+                contentDescription = "$coinName image",
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+            )
+            Text(
+                text = coinSymbol.uppercase(),
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 32.sp),
+                color = Color.White,
+                textAlign = TextAlign.Center,
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = "Success",

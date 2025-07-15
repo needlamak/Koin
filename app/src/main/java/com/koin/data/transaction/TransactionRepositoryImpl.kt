@@ -31,7 +31,8 @@ class TransactionRepositoryImpl @Inject constructor(
                     transactionFee = entity.transactionFee,
                     timestamp = entity.timestamp,
                     coinName = coin?.name ?: "Unknown",
-                    coinSymbol = coin?.symbol ?: "UNK"
+                    coinSymbol = coin?.symbol ?: "UNK",
+                    coinImage = coin?.imageUrl
                 )
             }
         }
