@@ -298,7 +298,7 @@ private fun PortfolioTopBar(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(20))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .2f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
@@ -323,7 +323,7 @@ private fun PortfolioTopBar(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)),
                         contentAlignment = Alignment.Center
                     ) {
                         IconButton(onClick = { navController.navigate(Screen.Notification.route) }) {
@@ -342,7 +342,7 @@ private fun PortfolioTopBar(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)),
                     contentAlignment = Alignment.Center
                 ) {
                     IconButton(onClick = { showMenu = !showMenu }) {

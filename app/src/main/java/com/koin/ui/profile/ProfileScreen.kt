@@ -1,6 +1,17 @@
 package com.koin.ui.profile
 
+import android.R.attr.onClick
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Indication
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,24 +28,34 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -43,6 +64,7 @@ import coil.compose.AsyncImage
 import com.koin.components.BottomNavBar
 import com.koin.domain.user.User
 import com.koin.domain.watchlist.WatchlistItem
+import com.koin.navigation.Screen
 
 @Composable
 fun ProfileScreen(
@@ -84,7 +106,7 @@ private fun ProfileContent(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -100,7 +122,7 @@ private fun ProfileContent(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -121,6 +143,16 @@ private fun ProfileContent(
                 .padding(paddingValues)
                 .fillMaxSize()
         ) {
+            ProfileCards(
+                onClick = {},
+                title = "Balance",
+                description = "Main account balance"
+            )
+            ProfileCards(
+                onClick = { navController.navigate(Screen.TransactionHistory.route) },
+                title = "Transactions",
+                description = "View your transaction history"
+            )
             WatchlistTab(
                 state = viewModel.uiState.collectAsState().value,
                 onEvent = viewModel::onEvent,
@@ -132,55 +164,183 @@ private fun ProfileContent(
     }
 }
 
+@Composable
+fun ProfileCards(
+    onClick: () -> Unit,
+    title: String,
+    description: String
+) {
+    Card(
+        onClick = onClick,
+        Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .height(72.dp),
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
+    )
+    {
+        Row(
+            Modifier
+                .fillMaxSize()
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
 
+            Text(
+                title,
+                style = MaterialTheme.typography.headlineSmall
+            )
+            IconButton(onClick = onClick) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                        contentDescription = description
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun WatchlistTab(
     state: ProfileUiState,
     onEvent: (ProfileUiEvent) -> Unit,
     onCoinClick: (String) -> Unit
 ) {
+    // 1. State to control the expanded/collapsed state, default to expanded
+    var isExpanded by remember { mutableStateOf(true) }
+
+    // 2. Animate the rotation of the arrow icon
+    val rotationAngle by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        label = "arrow_rotation_animation"
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text(
-            "Your Watchlist",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        // 3. Clickable Row to act as the header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { isExpanded = !isExpanded }
+                )
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Your Watchlist",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.weight(1f)
+            )
 
-        if (state.watchlist.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        "No coins in watchlist",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Add coins to your watchlist from the detail screen",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    modifier = Modifier.rotate(rotationAngle) // Apply rotation
+                )
             }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(state.watchlist) { item ->
-                    WatchlistItemCard(
-                        item = item,
-                        onClick = { onCoinClick(item.coinId) },
-                        onRemove = { onEvent(ProfileUiEvent.RemoveFromWatchlist(item.coinId)) }
-                    )
+        }
+
+        // 4. Animate the visibility of the watchlist content
+        AnimatedVisibility(
+            visible = isExpanded,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            // This Column wrapper helps the animation work correctly with the LazyColumn's padding/spacing
+            Column {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (state.watchlist.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "No coins in watchlist",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Add coins to your watchlist from the detail screen",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(state.watchlist, key = { it.coinId }) { item ->
+                            // The SwipeToDismissBox implementation remains the same
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = {
+                                    if (it == SwipeToDismissBoxValue.EndToStart) {
+                                        onEvent(ProfileUiEvent.RemoveFromWatchlist(item.coinId))
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                },
+                                positionalThreshold = { totalDistance -> totalDistance * 0.25f }
+                            )
+
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                modifier = Modifier.animateItemPlacement(),
+                                enableDismissFromStartToEnd = false,
+                                enableDismissFromEndToStart = true,
+                                backgroundContent = {
+                                    val color = MaterialTheme.colorScheme.errorContainer
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(color, shape = MaterialTheme.shapes.medium)
+                                            .padding(horizontal = 20.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                            tint = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+                                }
+                            ) {
+                                WatchlistItemCard(
+                                    item = item,
+                                    onClick = { onCoinClick(item.coinId) }
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -191,8 +351,8 @@ private fun WatchlistTab(
 @Composable
 private fun WatchlistItemCard(
     item: WatchlistItem,
-    onClick: () -> Unit,
-    onRemove: () -> Unit
+    onClick: () -> Unit
+    // The onRemove parameter is no longer needed
 ) {
     Card(
         onClick = onClick,
@@ -233,16 +393,7 @@ private fun WatchlistItemCard(
                 )
             }
 
-            // Remove button
-            IconButton(
-                onClick = onRemove
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Remove from watchlist",
-                    tint = MaterialTheme.colorScheme.error
-                )
-            }
+            // The IconButton has been removed
         }
     }
 }

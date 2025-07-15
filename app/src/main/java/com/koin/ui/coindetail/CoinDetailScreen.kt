@@ -170,7 +170,7 @@ fun CoinDetailScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -192,7 +192,7 @@ fun CoinDetailScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .3f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(

@@ -1,5 +1,7 @@
 package com.koin.components
 
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Icon
@@ -8,10 +10,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -19,13 +26,17 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 @Composable
 fun BottomNavBar(navController: NavHostController) {
     val items = listOf(
-        NavItem("portfolio", Icons.Default.AccountBalanceWallet, "Portfolio"),
-        NavItem("coin_list", Icons.Default.Home, "Coins"),
-        NavItem("profile", Icons.Default.AccountCircle, "Profile")
+        NavItem("portfolio", Icons.Rounded.AccountBalanceWallet, //""
+        ),
+        NavItem("coin_list", Icons.Rounded.Home, //""
+        ),
+        NavItem("profile", Icons.Rounded.AccountCircle, //""
+        )
     )
 
     NavigationBar(
-        containerColor = MaterialTheme.colorScheme.background
+        modifier = Modifier.height(70.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer
     ) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
@@ -48,12 +59,14 @@ fun BottomNavBar(navController: NavHostController) {
                     }
                 },
                 icon = {
-                    Icon(item.icon, contentDescription = item.label)
+                    Icon(item.icon, contentDescription ="" // item.label
+                    )
                 },
-                label = { Text(item.label) }
+//                label = { Text(item.label) }
             )
         }
     }
 }
 
-data class NavItem(val route: String, val icon: ImageVector, val label: String)
+data class NavItem(val route: String, val icon: ImageVector//, val label: String
+)
