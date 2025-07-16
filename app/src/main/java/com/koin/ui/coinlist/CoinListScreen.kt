@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -77,14 +78,13 @@ import androidx.wear.compose.material.FractionalThreshold
 import androidx.wear.compose.material.rememberSwipeableState
 import androidx.wear.compose.material.swipeable
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.koin.components.BottomNavBar
 import com.koin.domain.model.Coin
 import com.koin.util.NetworkMonitor
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,55 +95,48 @@ fun CoinListScreen(
     navController: NavController,
     modifier: Modifier = Modifier
 ) {
-
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
-    var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
     var showFilters by rememberSaveable { mutableStateOf(false) }
-    var selectedSortType by rememberSaveable { mutableStateOf(SortType.NAME_ASC) }
-    var showOnlyPositiveChange by rememberSaveable { mutableStateOf(false) }
 
+    // Animate filter icon rotation
     val filterIconRotation by animateFloatAsState(
         targetValue = if (showFilters) 180f else 0f,
         label = "filterRotation"
     )
 
+    // Optimize toolbar visibility logic
     var showToolbarAndFab by remember { mutableStateOf(true) }
     val showScrollToTopButton by remember {
         derivedStateOf {
-            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
+            listState.firstVisibleItemIndex > 0
         }
     }
 
-    // Network state
+    // Network monitoring
     val networkMonitor = remember { NetworkMonitor(context) }
     val isNetworkAvailable by networkMonitor.isNetworkAvailable.collectAsState()
 
-    // Keep search query in sync with state
-    LaunchedEffect(state.searchQuery) {
-        searchQuery = state.searchQuery
-    }
-
-    // Hide toolbar and FAB on scroll down
+    // Optimize scroll detection
     LaunchedEffect(listState) {
-        var previousOffset = listState.firstVisibleItemScrollOffset
-        snapshotFlow { listState.firstVisibleItemScrollOffset }
-            .map { currentOffset ->
-                currentOffset > previousOffset && currentOffset > 0
-            }
+        var lastScrollOffset = 0
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }
             .distinctUntilChanged()
-            .collect { isScrollingDown ->
-                showToolbarAndFab = !isScrollingDown
-                previousOffset = listState.firstVisibleItemScrollOffset
+            .collect { (index, offset) ->
+                val currentScrollOffset = index * 100 + offset // Approximate
+                showToolbarAndFab = currentScrollOffset <= lastScrollOffset || currentScrollOffset < 100
+                lastScrollOffset = currentScrollOffset
             }
     }
-
 
     val sheetState = rememberModalBottomSheetState()
 
+    // Modal bottom sheets
     if (state.showBuyDialog) {
         ModalBottomSheet(
             onDismissRequest = { onEvent(CoinListUiEvent.HideBuyDialog) },
@@ -189,29 +182,26 @@ fun CoinListScreen(
                 exit = slideOutVertically() + fadeOut()
             ) {
                 CoinListToolbar(
-                    searchQuery = searchQuery,
+                    searchQuery = state.searchQuery,
                     isSearchActive = isSearchActive,
                     onQueryChange = { newQuery ->
-                        searchQuery = newQuery
                         onEvent(CoinListUiEvent.OnSearchQueryChange(newQuery))
                     },
                     onSearch = { isSearchActive = false },
                     onActiveChange = { active -> isSearchActive = active },
                     onResetSearch = {
-                        searchQuery = ""
                         onEvent(CoinListUiEvent.ResetSearch)
                     },
                     onToggleFilters = { showFilters = !showFilters },
                     showFiltersActive = showFilters,
                     filterIconRotation = filterIconRotation,
                     onResetAllFilters = {
-                        searchQuery = ""
-                        selectedSortType = SortType.NAME_ASC
-                        showOnlyPositiveChange = false
                         onEvent(CoinListUiEvent.ResetFilters)
                         showFilters = false
                     },
-                    showResetFiltersButton = searchQuery.isNotEmpty() || showOnlyPositiveChange || selectedSortType != SortType.NAME_ASC,
+                    showResetFiltersButton = state.searchQuery.isNotEmpty() ||
+                            state.showOnlyPositiveChange ||
+                            state.sortType != SortType.NAME_ASC,
                     filteredCoins = state.filteredCoins
                 )
             }
@@ -237,7 +227,7 @@ fun CoinListScreen(
             BottomNavBar(navController = navController as NavHostController)
         }
     ) { paddingValues ->
-        val paddingValues = paddingValues
+        val paddingVal = paddingValues
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -249,88 +239,10 @@ fun CoinListScreen(
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            "Sort by",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                        ) {
-                            SortTypeChip(
-                                text = "Name",
-                                selected = selectedSortType in listOf(
-                                    SortType.NAME_ASC,
-                                    SortType.NAME_DESC
-                                ),
-                                ascending = selectedSortType == SortType.NAME_ASC,
-                                onClick = {
-                                    selectedSortType =
-                                        if (selectedSortType == SortType.NAME_ASC) SortType.NAME_DESC else SortType.NAME_ASC
-                                    onEvent(CoinListUiEvent.UpdateFilters(sortType = selectedSortType))
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            SortTypeChip(
-                                text = "Price",
-                                selected = selectedSortType in listOf(
-                                    SortType.PRICE_ASC,
-                                    SortType.PRICE_DESC
-                                ),
-                                ascending = selectedSortType == SortType.PRICE_ASC,
-                                onClick = {
-                                    selectedSortType =
-                                        if (selectedSortType == SortType.PRICE_ASC) SortType.PRICE_DESC else SortType.PRICE_ASC
-                                    onEvent(CoinListUiEvent.UpdateFilters(sortType = selectedSortType))
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            SortTypeChip(
-                                text = "Change",
-                                selected = selectedSortType in listOf(
-                                    SortType.CHANGE_ASC,
-                                    SortType.CHANGE_DESC
-                                ),
-                                ascending = selectedSortType == SortType.CHANGE_ASC,
-                                onClick = {
-                                    selectedSortType =
-                                        if (selectedSortType == SortType.CHANGE_ASC) SortType.CHANGE_DESC else SortType.CHANGE_ASC
-                                    onEvent(CoinListUiEvent.UpdateFilters(sortType = selectedSortType))
-                                }
-                            )
-                        }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = showOnlyPositiveChange,
-                                onCheckedChange = {
-                                    showOnlyPositiveChange = it
-                                    onEvent(CoinListUiEvent.UpdateFilters(showOnlyPositiveChange = it))
-                                }
-                            )
-                            Text(
-                                "Show only positive change",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
+                FilterSection(
+                    state = state,
+                    onEvent = onEvent
+                )
             }
 
             // Main content area
@@ -345,12 +257,9 @@ fun CoinListScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     when {
-                        // Show loading if loading is in progress and no data
                         state.isLoading -> {
                             LoadingState()
                         }
-
-                        // Show error if there's an error and no coins
                         state.error != null && state.coins.isEmpty() -> {
                             ErrorEmptyState(
                                 error = state.error,
@@ -358,45 +267,22 @@ fun CoinListScreen(
                                 onRetry = { onEvent(CoinListUiEvent.RefreshData) }
                             )
                         }
-
-                        // Show empty data state only if data is empty and there is no error
                         state.coins.isEmpty() -> {
                             DataEmptyState(
                                 isNetworkAvailable = isNetworkAvailable,
                                 onRetry = { onEvent(CoinListUiEvent.RefreshData) }
                             )
                         }
-
-                        // Show empty filtered state if the full list isn't empty, but search returns nothing
                         state.filteredCoins.isEmpty() -> {
                             EmptySearchState()
                         }
-
-                        // Finally, show list if all above are false
                         else -> {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(vertical = 28.dp)
-                            ) {
-                                item { Spacer(Modifier.height(20.dp)) }
-                                items(items = state.filteredCoins, key = { it.id }) { coin ->
-                                    CoinItem(
-                                        coin = coin,
-                                        onClick = { onCoinClick(coin.id) },
-                                        onToggleWatchlist = {
-                                            onEvent(
-                                                CoinListUiEvent.ToggleWatchlist(
-                                                    it
-                                                )
-                                            )
-                                        },
-                                        onBuyClick = {
-                                            onEvent(CoinListUiEvent.ShowBuyDialog(coin))
-                                        }
-                                    )
-                                }
-                            }
+                            OptimizedCoinList(
+                                coins = state.filteredCoins,
+                                listState = listState,
+                                onCoinClick = onCoinClick,
+                                onEvent = onEvent
+                            )
                         }
                     }
                 }
@@ -405,23 +291,133 @@ fun CoinListScreen(
     }
 }
 
+@Composable
+private fun FilterSection(
+    state: CoinListUiState,
+    onEvent: (CoinListUiEvent) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                "Sort by",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                SortTypeChip(
+                    text = "Name",
+                    selected = state.sortType in listOf(SortType.NAME_ASC, SortType.NAME_DESC),
+                    ascending = state.sortType == SortType.NAME_ASC,
+                    onClick = {
+                        val newSortType = if (state.sortType == SortType.NAME_ASC)
+                            SortType.NAME_DESC else SortType.NAME_ASC
+                        onEvent(CoinListUiEvent.UpdateFilters(sortType = newSortType))
+                    }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                SortTypeChip(
+                    text = "Price",
+                    selected = state.sortType in listOf(SortType.PRICE_ASC, SortType.PRICE_DESC),
+                    ascending = state.sortType == SortType.PRICE_ASC,
+                    onClick = {
+                        val newSortType = if (state.sortType == SortType.PRICE_ASC)
+                            SortType.PRICE_DESC else SortType.PRICE_ASC
+                        onEvent(CoinListUiEvent.UpdateFilters(sortType = newSortType))
+                    }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                SortTypeChip(
+                    text = "Change",
+                    selected = state.sortType in listOf(SortType.CHANGE_ASC, SortType.CHANGE_DESC),
+                    ascending = state.sortType == SortType.CHANGE_ASC,
+                    onClick = {
+                        val newSortType = if (state.sortType == SortType.CHANGE_ASC)
+                            SortType.CHANGE_DESC else SortType.CHANGE_ASC
+                        onEvent(CoinListUiEvent.UpdateFilters(sortType = newSortType))
+                    }
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = state.showOnlyPositiveChange,
+                    onCheckedChange = {
+                        onEvent(CoinListUiEvent.UpdateFilters(showOnlyPositiveChange = it))
+                    }
+                )
+                Text(
+                    "Show only positive change",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OptimizedCoinList(
+    coins: List<Coin>,
+    listState: LazyListState,
+    onCoinClick: (String) -> Unit,
+    onEvent: (CoinListUiEvent) -> Unit
+) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = 28.dp)
+    ) {
+        item { Spacer(Modifier.height(20.dp)) }
+        items(
+            items = coins,
+            key = { coin -> coin.id }
+        ) { coin ->
+            OptimizedCoinItem(
+                coin = coin,
+                onClick = { onCoinClick(coin.id) },
+                onToggleWatchlist = { onEvent(CoinListUiEvent.ToggleWatchlist(coin)) },
+                onBuyClick = { onEvent(CoinListUiEvent.ShowBuyDialog(coin)) }
+            )
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalWearMaterialApi::class)
 @Composable
-private fun CoinItem(
+private fun OptimizedCoinItem(
     coin: Coin,
     onClick: () -> Unit,
-    onToggleWatchlist: (Coin) -> Unit,
+    onToggleWatchlist: () -> Unit,
     onBuyClick: () -> Unit
 ) {
     val swipeableState = rememberSwipeableState(initialValue = 0)
-    val sizePx = with(LocalDensity.current) { 160.dp.toPx() } // Increased size for two icons
-    val anchors = mapOf(0f to 0, -sizePx to 1) // 0 = closed, 1 = swiped
+    val sizePx = with(LocalDensity.current) { 160.dp.toPx() }
+    val anchors = mapOf(0f to 0, -sizePx to 1)
 
-    Box(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        // Background with star and buy buttons (revealed when swiped)
+    // Memoize expensive calculations
+    val priceColor = remember(coin.isPositive24h) {
+        if (coin.isPositive24h) Color.Green else Color.Red
+    }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        // Background with actions
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -430,9 +426,8 @@ private fun CoinItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = { onToggleWatchlist(coin) },
-                modifier = Modifier
-                    .size(80.dp)
+                onClick = onToggleWatchlist,
+                modifier = Modifier.size(80.dp)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.StarBorder,
@@ -443,8 +438,7 @@ private fun CoinItem(
             }
             IconButton(
                 onClick = onBuyClick,
-                modifier = Modifier
-                    .size(80.dp)
+                modifier = Modifier.size(80.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.ShoppingCart,
@@ -475,9 +469,13 @@ private fun CoinItem(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Coin icon
+                // Coin icon with better loading
                 AsyncImage(
-                    model = coin.imageUrl,
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(coin.imageUrl)
+                        .memoryCacheKey(coin.id)
+                        .diskCacheKey(coin.id)
+                        .build(),
                     contentDescription = "${coin.name} logo",
                     modifier = Modifier
                         .size(40.dp)
@@ -487,9 +485,7 @@ private fun CoinItem(
                 Spacer(modifier = Modifier.width(16.dp))
 
                 // Coin info
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = coin.name,
                         style = MaterialTheme.typography.titleMedium,
@@ -504,16 +500,14 @@ private fun CoinItem(
                 }
 
                 // Price info
-                Column(
-                    horizontalAlignment = Alignment.End
-                ) {
+                Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = coin.formattedPrice,
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
                         text = coin.formattedPriceChange,
-                        color = if (coin.isPositive24h) Color.Green else Color.Red,
+                        color = priceColor,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -521,6 +515,431 @@ private fun CoinItem(
         }
     }
 }
+
+
+//
+//@OptIn(ExperimentalMaterial3Api::class)
+//@Composable
+//fun CoinListScreen(
+//    state: CoinListUiState,
+//    onEvent: (CoinListUiEvent) -> Unit,
+//    onCoinClick: (String) -> Unit,
+//    navController: NavController,
+//    modifier: Modifier = Modifier
+//) {
+//
+//    val context = LocalContext.current
+//    val listState = rememberLazyListState()
+//    val coroutineScope = rememberCoroutineScope()
+//
+//    var isSearchActive by remember { mutableStateOf(false) }
+//    var showFilters by rememberSaveable { mutableStateOf(false) }
+//    var showOnlyPositiveChange by rememberSaveable { mutableStateOf(false) }
+//
+//    val filterIconRotation by animateFloatAsState(
+//        targetValue = if (showFilters) 180f else 0f,
+//        label = "filterRotation"
+//    )
+//
+//    var showToolbarAndFab by remember { mutableStateOf(true) }
+//    val showScrollToTopButton by remember {
+//        derivedStateOf {
+//            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
+//        }
+//    }
+//
+//    // Network state
+//    val networkMonitor = remember { NetworkMonitor(context) }
+//    val isNetworkAvailable by networkMonitor.isNetworkAvailable.collectAsState()
+//
+//    // Hide toolbar and FAB on scroll down
+//    LaunchedEffect(listState) {
+//        var previousOffset = listState.firstVisibleItemScrollOffset
+//        snapshotFlow { listState.firstVisibleItemScrollOffset }
+//            .map { currentOffset ->
+//                currentOffset > previousOffset && currentOffset > 0
+//            }
+//            .distinctUntilChanged()
+//            .collect { isScrollingDown ->
+//                showToolbarAndFab = !isScrollingDown
+//                previousOffset = listState.firstVisibleItemScrollOffset
+//            }
+//    }
+//
+//
+//    val sheetState = rememberModalBottomSheetState()
+//
+//    if (state.showBuyDialog) {
+//        ModalBottomSheet(
+//            onDismissRequest = { onEvent(CoinListUiEvent.HideBuyDialog) },
+//            sheetState = sheetState
+//        ) {
+//            state.selectedCoinForBuy?.let { coin ->
+//                BuyBottomSheet(
+//                    coin = coin,
+//                    onConfirm = { amount ->
+//                        onEvent(CoinListUiEvent.BuyCoin(coin, amount))
+//                    }
+//                )
+//            }
+//        }
+//    }
+//
+//    if (state.showBuySuccessBottomSheet) {
+//        ModalBottomSheet(
+//            onDismissRequest = { onEvent(CoinListUiEvent.HideBuySuccessBottomSheet) },
+//            sheetState = sheetState
+//        ) {
+//            state.buyTransactionDetails?.let { details ->
+//                BuySuccessBottomSheet(
+//                    coinName = details.coinName,
+//                    coinSymbol = details.coinSymbol,
+//                    coinImage = details.coinImage,
+//                    quantity = details.quantity,
+//                    totalPrice = details.totalPrice,
+//                    onDismiss = { onEvent(CoinListUiEvent.HideBuySuccessBottomSheet) }
+//                )
+//            }
+//        }
+//    }
+//
+//    Scaffold(
+//        modifier = modifier
+//            .fillMaxSize()
+//            .statusBarsPadding(),
+//        topBar = {
+//            AnimatedVisibility(
+//                visible = showToolbarAndFab,
+//                enter = slideInVertically() + fadeIn(),
+//                exit = slideOutVertically() + fadeOut()
+//            ) {
+//                CoinListToolbar(
+//                    searchQuery = state.searchQuery,
+//                    isSearchActive = isSearchActive,
+//                    onQueryChange = { newQuery ->
+//                        onEvent(CoinListUiEvent.OnSearchQueryChange(newQuery))
+//                    },
+//                    onSearch = { isSearchActive = false },
+//                    onActiveChange = { active -> isSearchActive = active },
+//                    onResetSearch = {
+//                        onEvent(CoinListUiEvent.ResetSearch)
+//                    },
+//                    onToggleFilters = { showFilters = !showFilters },
+//                    showFiltersActive = showFilters,
+//                    filterIconRotation = filterIconRotation,
+//                    onResetAllFilters = {
+//                        onEvent(CoinListUiEvent.ResetFilters)
+//                        showFilters = false
+//                    },
+//                    showResetFiltersButton = state.searchQuery.isNotEmpty() || state.showOnlyPositiveChange || state.sortType != SortType.NAME_ASC,
+//                    filteredCoins = state.filteredCoins
+//                )
+//            }
+//        },
+//        floatingActionButton = {
+//            AnimatedVisibility(
+//                visible = showToolbarAndFab && showScrollToTopButton,
+//                enter = fadeIn() + scaleIn(),
+//                exit = fadeOut() + scaleOut()
+//            ) {
+//                SmallFloatingActionButton(
+//                    onClick = {
+//                        coroutineScope.launch {
+//                            listState.animateScrollToItem(0)
+//                        }
+//                    }
+//                ) {
+//                    Icon(Icons.Filled.ArrowUpward, "Scroll to top")
+//                }
+//            }
+//        },
+//        bottomBar = {
+//            BottomNavBar(navController = navController as NavHostController)
+//        }
+//    ) { paddingValues ->
+//        val paddingValues = paddingValues
+//        Column(
+//            modifier = Modifier
+//                .fillMaxSize()
+//                .padding(vertical = 10.dp)
+//        ) {
+//            // Filter section
+//            AnimatedVisibility(
+//                visible = showFilters,
+//                enter = expandVertically() + fadeIn(),
+//                exit = shrinkVertically() + fadeOut()
+//            ) {
+//                Card(
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .padding(horizontal = 16.dp),
+//                    colors = CardDefaults.cardColors(
+//                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+//                    )
+//                ) {
+//                    Column(modifier = Modifier.padding(16.dp)) {
+//                        Text(
+//                            "Sort by",
+//                            style = MaterialTheme.typography.titleMedium,
+//                            color = MaterialTheme.colorScheme.onSurfaceVariant
+//                        )
+//                        Row(
+//                            modifier = Modifier
+//                                .fillMaxWidth()
+//                                .padding(vertical = 8.dp)
+//                        ) {
+//                            SortTypeChip(
+//                                text = "Name",
+//                                selected = state.sortType in listOf(
+//                                    SortType.NAME_ASC,
+//                                    SortType.NAME_DESC
+//                                ),
+//                                ascending = state.sortType == SortType.NAME_ASC,
+//                                onClick = {
+//                                    val newSortType =
+//                                        if (state.sortType == SortType.NAME_ASC) SortType.NAME_DESC else SortType.NAME_ASC
+//                                    onEvent(CoinListUiEvent.UpdateFilters(sortType = newSortType))
+//                                }
+//                            )
+//                            Spacer(modifier = Modifier.width(8.dp))
+//                            SortTypeChip(
+//                                text = "Price",
+//                                selected = state.sortType in listOf(
+//                                    SortType.PRICE_ASC,
+//                                    SortType.PRICE_DESC
+//                                ),
+//                                ascending = state.sortType == SortType.PRICE_ASC,
+//                                onClick = {
+//                                    val newSortType =
+//                                        if (state.sortType == SortType.PRICE_ASC) SortType.PRICE_DESC else SortType.PRICE_ASC
+//                                    onEvent(CoinListUiEvent.UpdateFilters(sortType = newSortType))
+//                                }
+//                            )
+//                            Spacer(modifier = Modifier.width(8.dp))
+//                            SortTypeChip(
+//                                text = "Change",
+//                                selected = state.sortType in listOf(
+//                                    SortType.CHANGE_ASC,
+//                                    SortType.CHANGE_DESC
+//                                ),
+//                                ascending = state.sortType == SortType.CHANGE_ASC,
+//                                onClick = {
+//                                    val newSortType =
+//                                        if (state.sortType == SortType.CHANGE_ASC) SortType.CHANGE_DESC else SortType.CHANGE_ASC
+//                                    onEvent(CoinListUiEvent.UpdateFilters(sortType = newSortType))
+//                                }
+//                            )
+//                        }
+//                        Row(
+//                            modifier = Modifier
+//                                .fillMaxWidth()
+//                                .padding(vertical = 8.dp),
+//                            verticalAlignment = Alignment.CenterVertically
+//                        ) {
+//                            Checkbox(
+//                                checked = state.showOnlyPositiveChange,
+//                                onCheckedChange = {
+//                                    onEvent(CoinListUiEvent.UpdateFilters(showOnlyPositiveChange = it))
+//                                }
+//                            )
+//                            Text(
+//                                "Show only positive change",
+//                                style = MaterialTheme.typography.bodyMedium,
+//                                color = MaterialTheme.colorScheme.onSurfaceVariant
+//                            )
+//                        }
+//                    }
+//                }
+//            }
+//
+//            // Main content area
+//            Box(
+//                modifier = Modifier
+//                    .fillMaxSize()
+//                    .weight(1f)
+//            ) {
+//                PullToRefreshBox(
+//                    isRefreshing = state.isRefreshing,
+//                    onRefresh = { onEvent(CoinListUiEvent.RefreshData) },
+//                    modifier = Modifier.fillMaxSize()
+//                ) {
+//                    when {
+//                        // Show loading if loading is in progress and no data
+//                        state.isLoading -> {
+//                            LoadingState()
+//                        }
+//
+//                        // Show error if there's an error and no coins
+//                        state.error != null && state.coins.isEmpty() -> {
+//                            ErrorEmptyState(
+//                                error = state.error,
+//                                isNetworkAvailable = isNetworkAvailable,
+//                                onRetry = { onEvent(CoinListUiEvent.RefreshData) }
+//                            )
+//                        }
+//
+//                        // Show empty data state only if data is empty and there is no error
+//                        state.coins.isEmpty() -> {
+//                            DataEmptyState(
+//                                isNetworkAvailable = isNetworkAvailable,
+//                                onRetry = { onEvent(CoinListUiEvent.RefreshData) }
+//                            )
+//                        }
+//
+//                        // Show empty filtered state if the full list isn't empty, but search returns nothing
+//                        state.filteredCoins.isEmpty() -> {
+//                            EmptySearchState()
+//                        }
+//
+//                        // Finally, show list if all above are false
+//                        else -> {
+//                            LazyColumn(
+//                                state = listState,
+//                                modifier = Modifier.fillMaxSize(),
+//                                contentPadding = PaddingValues(vertical = 28.dp)
+//                            ) {
+//                                item { Spacer(Modifier.height(20.dp)) }
+//                                items(items = state.filteredCoins, key = { it.id }) { coin ->
+//                                    CoinItem(
+//                                        coin = coin,
+//                                        onClick = { onCoinClick(coin.id) },
+//                                        onToggleWatchlist = {
+//                                            onEvent(
+//                                                CoinListUiEvent.ToggleWatchlist(
+//                                                    it
+//                                                )
+//                                            )
+//                                        },
+//                                        onBuyClick = {
+//                                            onEvent(CoinListUiEvent.ShowBuyDialog(coin))
+//                                        }
+//                                    )
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
+//
+//
+//@OptIn(ExperimentalMaterial3Api::class, ExperimentalWearMaterialApi::class)
+//@Composable
+//private fun CoinItem(
+//    coin: Coin,
+//    onClick: () -> Unit,
+//    onToggleWatchlist: (Coin) -> Unit,
+//    onBuyClick: () -> Unit
+//) {
+//    val swipeableState = rememberSwipeableState(initialValue = 0)
+//    val sizePx = with(LocalDensity.current) { 160.dp.toPx() } // Increased size for two icons
+//    val anchors = mapOf(0f to 0, -sizePx to 1) // 0 = closed, 1 = swiped
+//
+//    Box(
+//        modifier = Modifier.fillMaxWidth()
+//    ) {
+//        // Background with star and buy buttons (revealed when swiped)
+//        Row(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .height(72.dp),
+//            horizontalArrangement = Arrangement.End,
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            IconButton(
+//                onClick = { onToggleWatchlist(coin) },
+//                modifier = Modifier
+//                    .size(80.dp)
+//            ) {
+//                Icon(
+//                    imageVector = Icons.Outlined.StarBorder,
+//                    contentDescription = "Add to watchlist",
+//                    tint = Color(0xFFFFD700),
+//                    modifier = Modifier.size(24.dp)
+//                )
+//            }
+//            IconButton(
+//                onClick = onBuyClick,
+//                modifier = Modifier
+//                    .size(80.dp)
+//            ) {
+//                Icon(
+//                    imageVector = Icons.Default.ShoppingCart,
+//                    contentDescription = "Buy Coin",
+//                    tint = MaterialTheme.colorScheme.primary,
+//                    modifier = Modifier.size(24.dp)
+//                )
+//            }
+//        }
+//
+//        // Main card content
+//        Card(
+//            onClick = onClick,
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .offset { IntOffset(swipeableState.offset.value.roundToInt(), 0) }
+//                .swipeable(
+//                    state = swipeableState,
+//                    anchors = anchors,
+//                    thresholds = { _, _ -> FractionalThreshold(0.3f) },
+//                    orientation = Orientation.Horizontal
+//                ),
+//            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
+//        ) {
+//            Row(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(16.dp),
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                // Coin icon
+//                AsyncImage(
+//                    model = coin.imageUrl,
+//                    contentDescription = "${coin.name} logo",
+//                    modifier = Modifier
+//                        .size(40.dp)
+//                        .clip(CircleShape)
+//                )
+//
+//                Spacer(modifier = Modifier.width(16.dp))
+//
+//                // Coin info
+//                Column(
+//                    modifier = Modifier.weight(1f)
+//                ) {
+//                    Text(
+//                        text = coin.name,
+//                        style = MaterialTheme.typography.titleMedium,
+//                        maxLines = 1,
+//                        overflow = TextOverflow.Ellipsis
+//                    )
+//                    Text(
+//                        text = coin.symbol.uppercase(),
+//                        style = MaterialTheme.typography.bodyMedium,
+//                        color = MaterialTheme.colorScheme.onSurfaceVariant
+//                    )
+//                }
+//
+//                // Price info
+//                Column(
+//                    horizontalAlignment = Alignment.End
+//                ) {
+//                    Text(
+//                        text = coin.formattedPrice,
+//                        style = MaterialTheme.typography.titleMedium
+//                    )
+//                    Text(
+//                        text = coin.formattedPriceChange,
+//                        color = if (coin.isPositive24h) Color.Green else Color.Red,
+//                        style = MaterialTheme.typography.bodyMedium
+//                    )
+//                }
+//            }
+//        }
+//    }
+//}
 
 
 @Composable

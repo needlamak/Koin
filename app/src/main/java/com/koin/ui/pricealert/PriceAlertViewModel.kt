@@ -8,7 +8,6 @@ import com.koin.domain.pricealert.CreatePriceAlertUseCase
 import com.koin.domain.pricealert.DeletePriceAlertUseCase
 import com.koin.domain.pricealert.GetPriceAlertsUseCase
 import com.koin.domain.pricealert.PriceAlertType
-import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,21 +22,21 @@ class PriceAlertViewModel @Inject constructor(
     private val createPriceAlertUseCase: CreatePriceAlertUseCase,
     private val deletePriceAlertUseCase: DeletePriceAlertUseCase
 ) : ViewModel() {
-    
+
     private val _uiState = MutableStateFlow(PriceAlertUiState())
     val uiState: StateFlow<PriceAlertUiState> = _uiState.asStateFlow()
-    
+
     private val _createAlertState = MutableStateFlow(CreateAlertUiState())
     val createAlertState: StateFlow<CreateAlertUiState> = _createAlertState.asStateFlow()
-    
+
     init {
         loadPriceAlerts()
     }
-    
+
     private fun loadPriceAlerts() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            
+
             getPriceAlertsUseCase()
                 .catch { exception ->
                     _uiState.value = _uiState.value.copy(
@@ -61,14 +60,14 @@ class PriceAlertViewModel @Inject constructor(
                 }
         }
     }
-    
+
     fun showCreateAlertDialog(coin: Coin) {
         _uiState.value = _uiState.value.copy(
             showCreateDialog = true,
             selectedCoin = coin
         )
     }
-    
+
     fun hideCreateAlertDialog() {
         _uiState.value = _uiState.value.copy(
             showCreateDialog = false,
@@ -76,22 +75,22 @@ class PriceAlertViewModel @Inject constructor(
         )
         _createAlertState.value = CreateAlertUiState()
     }
-    
+
     fun updateTargetPrice(price: String) {
         _createAlertState.value = _createAlertState.value.copy(targetPrice = price)
     }
-    
+
     fun updateAlertType(type: PriceAlertType) {
         _createAlertState.value = _createAlertState.value.copy(alertType = type)
     }
-    
+
     fun createAlert() {
         val selectedCoin = _uiState.value.selectedCoin ?: return
         val targetPrice = _createAlertState.value.targetPrice.toDoubleOrNull() ?: return
-        
+
         viewModelScope.launch {
             _createAlertState.value = _createAlertState.value.copy(isLoading = true)
-            
+
             val result = createPriceAlertUseCase(
                 coinId = selectedCoin.id,
                 coinName = selectedCoin.name,
@@ -100,7 +99,7 @@ class PriceAlertViewModel @Inject constructor(
                 targetPrice = targetPrice,
                 alertType = _createAlertState.value.alertType
             )
-            
+
             if (result.isSuccess) {
                 hideCreateAlertDialog()
                 loadPriceAlerts()
@@ -112,7 +111,7 @@ class PriceAlertViewModel @Inject constructor(
             }
         }
     }
-    
+
     fun deleteAlert(alertId: PriceAlertEntity) {
         viewModelScope.launch {
             deletePriceAlertUseCase(alertId)

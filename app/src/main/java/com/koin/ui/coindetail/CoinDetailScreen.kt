@@ -78,8 +78,7 @@ fun CoinDetailScreen(
     state: CoinDetailUiState,
     onEvent: (CoinDetailUiEvent) -> Unit,
     onBackClick: () -> Unit,
-    priceAlertViewModel: PriceAlertViewModel = hiltViewModel(),
-    modifier: Modifier = Modifier
+    priceAlertViewModel: PriceAlertViewModel = hiltViewModel()
 ) {
     val coin = state.coin
     val selectedTimeRange = state.selectedTimeRange
@@ -262,7 +261,7 @@ fun CoinDetailScreen(
 
                 else -> {
                     Column(
-                        modifier = modifier
+                        modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(scrollState) // <--- Correctly applied here
                             .padding(8.dp) // Apply padding specific to the column content

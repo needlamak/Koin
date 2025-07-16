@@ -35,14 +35,20 @@ class CoinListViewModel @Inject constructor(
         when (event) {
             is CoinListUiEvent.RefreshData -> refreshCoinsData() // For fetching new data
             is CoinListUiEvent.OnSearchQueryChange -> updateSearchQuery(event.query)
-            is CoinListUiEvent.OnCoinClick -> { /* Handle navigation to detail */ }
+            is CoinListUiEvent.OnCoinClick -> { /* Handle navigation to detail */
+            }
+
             is CoinListUiEvent.ResetFilters -> resetAllFilters() // For resetting all active filters
             is CoinListUiEvent.ResetSearch -> resetSearchQuery() // For clearing just the search query
             is CoinListUiEvent.ToggleWatchlist -> toggleWatchlist(event.coin)
             is CoinListUiEvent.BuyCoin -> buyCoin(event.coin, event.amount)
             is CoinListUiEvent.HideBuySuccessBottomSheet -> hideBuySuccessBottomSheet()
             is CoinListUiEvent.ShowBuyDialog -> showBuyDialog(event.coin)
-            is CoinListUiEvent.UpdateFilters -> updateFilters(event.sortType, event.showOnlyPositiveChange)
+            is CoinListUiEvent.UpdateFilters -> updateFilters(
+                event.sortType,
+                event.showOnlyPositiveChange
+            )
+
             CoinListUiEvent.HideBuyDialog -> hideBuyDialog()
         }
     }
@@ -62,7 +68,12 @@ class CoinListViewModel @Inject constructor(
                         _uiState.update { state ->
                             state.copy(
                                 coins = coins,
-                                filteredCoins = filterCoins(coins, state.searchQuery, state.sortType, state.showOnlyPositiveChange),
+                                filteredCoins = filterCoins(
+                                    coins,
+                                    state.searchQuery,
+                                    state.sortType,
+                                    state.showOnlyPositiveChange
+                                ),
                                 isLoading = false,
                                 error = null
                             )
@@ -91,12 +102,22 @@ class CoinListViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 searchQuery = query,
-                filteredCoins = filterCoins(state.coins, query, state.sortType, state.showOnlyPositiveChange)
+                filteredCoins = filterCoins(
+                    state.coins,
+                    query,
+                    state.sortType,
+                    state.showOnlyPositiveChange
+                )
             )
         }
     }
 
-    private fun filterCoins(coins: List<Coin>, query: String, sortType: SortType, showOnlyPositiveChange: Boolean): List<Coin> {
+    private fun filterCoins(
+        coins: List<Coin>,
+        query: String,
+        sortType: SortType,
+        showOnlyPositiveChange: Boolean
+    ): List<Coin> {
         val filtered = if (query.isBlank()) {
             coins
         } else {
@@ -129,7 +150,12 @@ class CoinListViewModel @Inject constructor(
             state.copy(
                 sortType = newSortType,
                 showOnlyPositiveChange = newShowOnlyPositiveChange,
-                filteredCoins = filterCoins(state.coins, state.searchQuery, newSortType, newShowOnlyPositiveChange)
+                filteredCoins = filterCoins(
+                    state.coins,
+                    state.searchQuery,
+                    newSortType,
+                    newShowOnlyPositiveChange
+                )
             )
         }
     }
@@ -151,7 +177,12 @@ class CoinListViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 searchQuery = "",
-                filteredCoins = filterCoins(state.coins, "", state.sortType, state.showOnlyPositiveChange) // Re-filter with an empty query
+                filteredCoins = filterCoins(
+                    state.coins,
+                    "",
+                    state.sortType,
+                    state.showOnlyPositiveChange
+                ) // Re-filter with an empty query
             )
         }
     }
@@ -243,9 +274,11 @@ sealed class CoinListUiEvent {
     object HideBuySuccessBottomSheet : CoinListUiEvent()
     data class ShowBuyDialog(val coin: Coin) : CoinListUiEvent()
     object HideBuyDialog : CoinListUiEvent()
-    data class UpdateFilters(val sortType: SortType? = null, val showOnlyPositiveChange: Boolean? = null) : CoinListUiEvent()
+    data class UpdateFilters(
+        val sortType: SortType? = null,
+        val showOnlyPositiveChange: Boolean? = null
+    ) : CoinListUiEvent()
 }
-
 
 
 enum class SortType {

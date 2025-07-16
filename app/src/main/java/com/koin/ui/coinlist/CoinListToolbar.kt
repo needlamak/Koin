@@ -12,6 +12,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -60,120 +61,146 @@ fun CoinListToolbar(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         // DockedSearchBar
+        val colors1 = SearchBarDefaults.colors(
+            dividerColor = MaterialTheme.colorScheme.outline
+        )
         DockedSearchBar(
-            query = searchQuery,
-            onQueryChange = onQueryChange,
-            onSearch = onSearch,
-            active = isSearchActive,
-            onActiveChange = onActiveChange,
-            placeholder = { Text("Search coins...", style = MaterialTheme.typography.bodyLarge) },
-            leadingIcon = {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            trailingIcon = {
-                Row {
-                    // Reset Search Button (inside search bar, visible if query exists)
-                    AnimatedVisibility(
-                        visible = searchQuery.isNotEmpty(),
-                        enter = fadeIn(animationSpec = tween(200)) + expandHorizontally(animationSpec = tween(200)),
-                        exit = fadeOut(animationSpec = tween(200)) + shrinkHorizontally(animationSpec = tween(200))
-                    ) {
-                        IconButton(onClick = onResetSearch) {
-                            Icon(
-                                Icons.Default.Clear,
-                                contentDescription = "Clear search",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    // Filter Button (inside search bar)
-                    IconButton(onClick = onToggleFilters) {
+            inputField = {
+                SearchBarDefaults.InputField(
+                    query = searchQuery,
+                    onQueryChange = onQueryChange,
+                    onSearch = onSearch,
+                    expanded = isSearchActive,
+                    onExpandedChange = onActiveChange,
+                    placeholder = {
+                        Text(
+                            "Search coins...",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    },
+                    leadingIcon = {
                         Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = "Filter coins",
-                            modifier = Modifier.rotate(filterIconRotation),
-                            tint = if (showFiltersActive)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                            Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                }
-            },
-            colors = SearchBarDefaults.colors(
-                dividerColor = MaterialTheme.colorScheme.outline
-            ),
-            modifier = Modifier.weight(1f)
-        ) {
-            // Search suggestions/recent searches content
-            if (searchQuery.isEmpty()) {
-                Text(
-                    text = "Start typing to search",
-                    modifier = Modifier.padding(16.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                val suggestions = filteredCoins.filter { it.name.contains(searchQuery, ignoreCase = true) || it.symbol.contains(searchQuery, ignoreCase = true) }
-                if (suggestions.isNotEmpty()) {
-                    suggestions.forEach { coin ->
-                        ListItem(
-                            headlineContent = { Text(coin.name) },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    trailingIcon = {
+                        Row {
+                            // Reset Search Button (inside search bar, visible if query exists)
+                            AnimatedVisibility(
+                                visible = searchQuery.isNotEmpty(),
+                                enter = fadeIn(animationSpec = tween(200)) + expandHorizontally(
+                                    animationSpec = tween(200)
+                                ),
+                                exit = fadeOut(animationSpec = tween(200)) + shrinkHorizontally(
+                                    animationSpec = tween(200)
                                 )
-                            },
-                            modifier = Modifier.clickable {
-                                onQueryChange(coin.name)
-                                onSearch(coin.name)
-                                onActiveChange(false)
+                            ) {
+                                IconButton(onClick = onResetSearch) {
+                                    Icon(
+                                        Icons.Default.Clear,
+                                        contentDescription = "Clear search",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
-                        )
-                    }
-                } else {
+                            // Filter Button (inside search bar)
+                            IconButton(onClick = onToggleFilters) {
+                                Icon(
+                                    imageVector = Icons.Default.FilterList,
+                                    contentDescription = "Filter coins",
+                                    modifier = Modifier.rotate(filterIconRotation),
+                                    tint = if (showFiltersActive)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    colors = colors1.inputFieldColors,
+                )
+            },
+            expanded = isSearchActive,
+            onExpandedChange = onActiveChange,
+            modifier = Modifier.weight(1f),
+            shape = SearchBarDefaults.dockedShape,
+            colors = colors1,
+            tonalElevation = SearchBarDefaults.TonalElevation,
+            shadowElevation = SearchBarDefaults.ShadowElevation,
+            // Search suggestions/recent searches content = { // Search suggestions/recent searches content
+            {
+                if (searchQuery.isEmpty()) {
                     Text(
-                        text = "No matching coins found",
+                        text = "Start typing to search",
                         modifier = Modifier.padding(16.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                } else {
+                    val suggestions = filteredCoins.filter {
+                        it.name.contains(
+                            searchQuery,
+                            ignoreCase = true
+                        ) || it.symbol.contains(searchQuery, ignoreCase = true)
+                    }
+                    if (suggestions.isNotEmpty()) {
+                        suggestions.forEach { coin ->
+                            ListItem(
+                                headlineContent = { Text(coin.name) },
+                                leadingContent = {
+                                    Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                },
+                                modifier = Modifier.clickable {
+                                    onQueryChange(coin.name)
+                                    onSearch(coin.name)
+                                    onActiveChange(false)
+                                }
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "No matching coins found",
+                            modifier = Modifier.padding(16.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-            }
-        }
+            })
+    }
 
-        // --- Buttons OUTSIDE the Search Bar (dynamic visibility) ---
 
-        // Reset All Filters Button - visible when search is INACTIVE AND filters are applied
-        AnimatedVisibility(
-            visible = !isSearchActive && showResetFiltersButton,
-            enter = fadeIn(animationSpec = tween(250, delayMillis = 50)) +
-                    slideInHorizontally(
-                        animationSpec = tween(250, delayMillis = 50),
-                        initialOffsetX = { fullWidth -> fullWidth / 2 }
-                    ) +
-                    scaleIn(animationSpec = tween(250, delayMillis = 50), initialScale = 0.8f),
-            exit = fadeOut(animationSpec = tween(250)) +
-                    slideOutHorizontally(
-                        animationSpec = tween(250),
-                        targetOffsetX = { fullWidth -> fullWidth / 2 }
-                    ) +
-                    scaleOut(animationSpec = tween(250), targetScale = 0.8f)
+    // --- Buttons OUTSIDE the Search Bar (dynamic visibility) ---
+
+    // Reset All Filters Button - visible when search is INACTIVE AND filters are applied
+    AnimatedVisibility(
+        visible = !isSearchActive && showResetFiltersButton,
+        enter = fadeIn(animationSpec = tween(250, delayMillis = 50)) +
+                slideInHorizontally(
+                    animationSpec = tween(250, delayMillis = 50),
+                    initialOffsetX = { fullWidth -> fullWidth / 2 }
+                ) +
+                scaleIn(animationSpec = tween(250, delayMillis = 50), initialScale = 0.8f),
+        exit = fadeOut(animationSpec = tween(250)) +
+                slideOutHorizontally(
+                    animationSpec = tween(250),
+                    targetOffsetX = { fullWidth -> fullWidth / 2 }
+                ) +
+                scaleOut(animationSpec = tween(250), targetScale = 0.8f)
+    ) {
+        IconButton(
+            onClick = onResetAllFilters,
+            modifier = Modifier.padding(start = 8.dp)
         ) {
-            IconButton(
-                onClick = onResetAllFilters,
-                modifier = Modifier.padding(start = 8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.FilterListOff,
-                    contentDescription = "Reset all filters",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
+            Icon(
+                imageVector = Icons.Default.FilterListOff,
+                contentDescription = "Reset all filters",
+                tint = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }

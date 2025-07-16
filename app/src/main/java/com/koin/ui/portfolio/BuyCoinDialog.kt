@@ -6,6 +6,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -156,9 +157,13 @@ fun BuyCoinDialog(
                             TransactionRow("Price per coin:", coin.formattedPrice)
                             TransactionRow("Subtotal:", NumberFormat.getCurrencyInstance(Locale.US).format(totalCost))
                             TransactionRow("Transaction fee:", NumberFormat.getCurrencyInstance(Locale.US).format(transactionFee))
-                            
-                            Divider()
-                            
+
+                            HorizontalDivider(
+                                Modifier,
+                                DividerDefaults.Thickness,
+                                DividerDefaults.color
+                            )
+
                             TransactionRow(
                                 "Total:", 
                                 NumberFormat.getCurrencyInstance(Locale.US).format(totalWithFees),

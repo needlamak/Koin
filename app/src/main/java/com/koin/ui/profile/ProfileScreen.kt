@@ -1,14 +1,15 @@
 package com.koin.ui.profile
 
-import android.R.attr.onClick
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Indication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -33,7 +34,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
@@ -144,9 +145,9 @@ private fun ProfileContent(
                 .fillMaxSize()
         ) {
             ProfileCards(
-                onClick = {},
-                title = "Balance",
-                description = "Main account balance"
+                onClick = { navController.navigate(Screen.TotalBalance.route) },
+                title = "Total Balance",
+                description = "View your total balance and recent transactions"
             )
             ProfileCards(
                 onClick = { navController.navigate(Screen.TransactionHistory.route) },
@@ -314,7 +315,11 @@ private fun WatchlistTab(
 
                             SwipeToDismissBox(
                                 state = dismissState,
-                                modifier = Modifier.animateItemPlacement(),
+                                modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = spring(
+                                            stiffness = Spring.StiffnessMediumLow,
+                                            visibilityThreshold = IntOffset.VisibilityThreshold
+                                        )
+                                ),
                                 enableDismissFromStartToEnd = false,
                                 enableDismissFromEndToStart = true,
                                 backgroundContent = {

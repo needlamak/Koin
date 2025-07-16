@@ -5,16 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.koin.data.coin.TimeRange
 import com.koin.domain.coin.CoinRepository
 import com.koin.domain.model.Coin
+import com.koin.domain.notification.Notification
 import com.koin.domain.portfolio.BuyCoinUseCase
 import com.koin.domain.portfolio.GetBalanceUseCase
 import com.koin.domain.portfolio.GetPortfolioUseCase
 import com.koin.domain.portfolio.Portfolio
 import com.koin.domain.portfolio.PortfolioBalance
-import com.koin.domain.portfolio.PortfolioHolding
 import com.koin.domain.portfolio.RefreshPortfolioUseCase
 import com.koin.domain.portfolio.ResetPortfolioUseCase
 import com.koin.domain.portfolio.SellCoinUseCase
-import com.koin.domain.notification.Notification
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +26,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -74,7 +74,7 @@ class PortfolioViewModel @Inject constructor(
         _showSellDialog,
         _selectedCoinForSell
     ) { flows ->
-        val holdings = flows[0] as List<PortfolioHolding>
+        val holdings = flows[0] as List<*>
         val balance = flows[1] as PortfolioBalance?
         val isLoading = flows[2] as Boolean
         val error = flows[3] as String?
@@ -182,8 +182,9 @@ class PortfolioViewModel @Inject constructor(
     private fun buyCoin(coinId: String, quantity: Double) {
         viewModelScope.launch {
             try {
-                val result: Result<com.koin.domain.model.Coin> = coinRepository.getCoinById(coinId).first() as Result<Coin>
-                val coin: com.koin.domain.model.Coin? = result.getOrNull()
+                val result: Result<Coin> =
+                    coinRepository.getCoinById(coinId).first() as Result<Coin>
+                val coin: Coin? = result.getOrNull()
                 if (coin != null) {
                     buyCoinUseCase(coin, quantity)
                     _showBuyDialog.value = false
@@ -202,7 +203,13 @@ class PortfolioViewModel @Inject constructor(
                     notificationRepository.insert(
                         Notification(
                             title = "Coin Purchased: ${coin.name}",
-                            body = "You have successfully purchased ${quantity} of ${coin.name} for ${String.format("%.2f", quantity * coin.currentPrice)}."
+                            body = "You have successfully purchased $quantity of ${coin.name} for ${
+                                String.format(
+                                    Locale.US,
+                                    "%.2f",
+                                    quantity * coin.currentPrice
+                                )
+                            }."
                         )
                     )
                 } else {
@@ -227,7 +234,12 @@ class PortfolioViewModel @Inject constructor(
                     notificationRepository.insert(
                         Notification(
                             title = "Coin Sold: ${it.name}",
-                            body = "You have successfully sold ${quantity} of ${it.name} for ${String.format("%.2f", quantity * pricePerCoin)}."
+                            body = "You have successfully sold $quantity of ${it.name} for ${
+                                String.format(Locale.US,
+                                    "%.2f",
+                                    quantity * pricePerCoin
+                                )
+                            }."
                         )
                     )
                 }

@@ -5,7 +5,7 @@ import java.util.Locale
 
 data class Portfolio(
     val balance: Double,
-    val holdings: List<PortfolioHolding>,
+    val holdings: List<*>,
     val transactions: List<Transaction>
 ) {
     // Core portfolio calculations

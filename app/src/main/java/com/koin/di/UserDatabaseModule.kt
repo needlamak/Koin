@@ -18,21 +18,21 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class UserDatabaseModule {
-    
+
     @Binds
     abstract fun bindWatchlistRepository(
         watchlistRepositoryImpl: WatchlistRepositoryImpl
     ): WatchlistRepository
-    
+
     companion object {
         @Provides
         @Singleton
         fun provideUserDatabase(@ApplicationContext context: Context): UserDatabase =
             Room.databaseBuilder(
-                context,
-                UserDatabase::class.java,
-                UserDatabase.DATABASE_NAME
-            ).fallbackToDestructiveMigration() // Added for version change
+                        context,
+                        UserDatabase::class.java,
+                        UserDatabase.DATABASE_NAME
+                    ).fallbackToDestructiveMigration(false) // Added for version change
             .build()
 
         @Provides

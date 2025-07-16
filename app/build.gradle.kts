@@ -1,5 +1,3 @@
-import org.gradle.kotlin.dsl.implementation
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -32,8 +30,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("boolean", "DEBUG", "true")
+        }
+
         release {
             isMinifyEnabled = false
+            buildConfigField("boolean", "DEBUG", "true")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -59,7 +62,15 @@ ksp {
 }
 
 dependencies {
-    implementation ("androidx.datastore:datastore-preferences:1.1.7")
+
+    // Timber
+    implementation("com.jakewharton.timber:timber:5.0.1")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    // App Startup
+    implementation("androidx.startup:startup-runtime:1.2.0")
+
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
     // Remove duplicate paging dependencies at the top
     implementation(libs.androidx.paging.runtime.ktx)
     implementation(libs.androidx.paging.compose)

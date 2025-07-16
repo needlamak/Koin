@@ -50,9 +50,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -79,8 +77,7 @@ fun PortfolioDetailScreen(
     onEvent: (PortfolioDetailUiEvent) -> Unit,
     onBackClick: () -> Unit,
     navigateToTransactionSuccess: () -> Unit,
-    priceAlertViewModel: PriceAlertViewModel = hiltViewModel(),
-    modifier: Modifier = Modifier
+    priceAlertViewModel: PriceAlertViewModel = hiltViewModel()
 ) {
     val portfolioCoin = state.portfolioCoin
     val selectedTimeRange = state.selectedTimeRange
@@ -89,15 +86,6 @@ fun PortfolioDetailScreen(
 
     val priceAlertState by priceAlertViewModel.uiState.collectAsState()
     val createAlertState by priceAlertViewModel.createAlertState.collectAsState()
-
-    var showSellSuccessSheet by remember { mutableStateOf(false) }
-
-    LaunchedEffect(state.transactionSuccess) {
-        if (state.transactionSuccess) {
-            showSellSuccessSheet = true
-            onEvent(PortfolioDetailUiEvent.ClearToast) // Clear the transaction success state
-        }
-    }
 
     LaunchedEffect(state.error) {
         state.error?.let { errorMessage ->
@@ -164,7 +152,7 @@ fun PortfolioDetailScreen(
                                 Text(
                                     text = portfolioCoin?.formattedCurrentValue ?: "",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (portfolioCoin?.unrealizedPnL ?: 0.0 >= 0) Color.Green else Color.Red
+                                    color = if ((portfolioCoin?.unrealizedPnL ?: 0.0) >= 0) Color.Green else Color.Red
                                 )
                             }
                         }
@@ -253,7 +241,7 @@ fun PortfolioDetailScreen(
 
                 else -> {
                     Column(
-                        modifier = modifier
+                        modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(scrollState)
                             .padding(8.dp)

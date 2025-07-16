@@ -1,6 +1,7 @@
 package com.koin.data.coin
 
 import android.Manifest
+import android.content.Context
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.koin.app.pricealert.PriceAlertDao
@@ -11,6 +12,7 @@ import com.koin.domain.coin.CoinRepository
 import com.koin.domain.model.Coin
 import com.koin.domain.pricealert.PriceAlert
 import com.koin.domain.pricealert.PriceAlertType
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -162,7 +164,6 @@ class CoinRepositoryImpl @Inject constructor(
         }
     }
 
-    // Add to existing CoinRepositoryImpl class
     override suspend fun createPriceAlert(alert: PriceAlert): Result<Unit> {
         return try {
             val entity = PriceAlertEntity(
@@ -184,6 +185,33 @@ class CoinRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+//    // Add to existing CoinRepositoryImpl class
+//    override suspend fun createPriceAlert(alert: PriceAlert, context: Context): Result<Unit> {
+//        return try {
+//            val entity = PriceAlertEntity(
+//                id = alert.id,
+//                coinId = alert.coinId,
+//                coinName = alert.coinName,
+//                coinSymbol = alert.coinSymbol,
+//                coinImageUrl = alert.coinImageUrl,
+//                targetPrice = alert.targetPrice,
+//                alertType = alert.alertType.name,
+//                isActive = alert.isActive,
+//                isTriggered = alert.isTriggered,
+//                createdAt = alert.createdAt,
+//                triggeredAt = alert.triggeredAt
+//            )
+//            priceAlertDao.insertAlert(entity)
+//
+//            val workRequest = OneTimeWorkRequestBuilder<PriceAlertWorker>().build()
+//            WorkManager.getInstance(context).enqueue(workRequest)
+//
+//            Result.success(Unit)
+//        } catch (e: Exception) {
+//            Result.failure(e)
+//        }
+//    }
 
     override suspend fun deletePriceAlert(alertId: PriceAlertEntity): Result<Unit> {
         return try {

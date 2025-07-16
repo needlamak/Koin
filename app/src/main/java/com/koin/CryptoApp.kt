@@ -1,6 +1,8 @@
 package com.koin
 
 import android.app.Application
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
@@ -12,7 +14,10 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltAndroidApp
-class CryptoApp : Application() {
+class CryptoApp : Application(), Configuration.Provider {
+
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
 
     @Inject
     lateinit var portfolioInitializer: com.koin.data.portfolio.PortfolioInitializer
@@ -20,8 +25,14 @@ class CryptoApp : Application() {
     override fun onCreate() {
         super.onCreate()
         portfolioInitializer.initialize()
-        // Initialize any application-wide components here
+        setupPriceAlertWorker()
     }
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
+
     private fun setupPriceAlertWorker() {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -37,5 +48,4 @@ class CryptoApp : Application() {
             workRequest
         )
     }
-
 }
