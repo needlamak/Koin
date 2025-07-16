@@ -23,4 +23,5 @@ sealed class Screen(val route: String) {
     object NotificationDetail : Screen("notification_detail/{notificationId}") {
         fun createRoute(notificationId: Long) = "notification_detail/$notificationId"
     }
+    object TotalBalance : Screen("total_balance")
 }

@@ -144,9 +144,9 @@ private fun ProfileContent(
                 .fillMaxSize()
         ) {
             ProfileCards(
-                onClick = {},
-                title = "Balance",
-                description = "Main account balance"
+                onClick = { navController.navigate(Screen.TotalBalance.route) },
+                title = "Total Balance",
+                description = "View your total balance and recent transactions"
             )
             ProfileCards(
                 onClick = { navController.navigate(Screen.TransactionHistory.route) },

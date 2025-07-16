@@ -27,6 +27,7 @@ import com.koin.ui.settings.SettingsScreen
 import com.koin.ui.notification.NotificationScreen
 import com.koin.ui.notification.NotificationDetailScreen
 import com.koin.ui.splash.SplashScreen
+import com.koin.ui.totalbalance.TotalBalanceScreen
 import com.koin.ui.transactiondetail.TransactionDetailScreen
 import com.koin.ui.transactionsuccess.TransactionSuccessScreen
 import com.koin.ui.transactionhistory.TransactionHistoryScreen
@@ -194,6 +195,11 @@ fun NavGraph(
             if (notificationId != null) {
                 NotificationDetailScreen(navController, notificationId = notificationId)
             }
+        }
+
+        // Total Balance Screen
+        composable(Screen.TotalBalance.route) {
+            TotalBalanceScreen(navController = navController)
         }
     }
 }
