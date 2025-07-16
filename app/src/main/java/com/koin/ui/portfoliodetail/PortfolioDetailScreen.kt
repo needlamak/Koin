@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.koin.components.ChangeIndicator
 import com.koin.data.coin.TimeRange
 import com.koin.domain.model.Coin
 import com.koin.ui.coindetail.EnhancedPriceChart
@@ -292,11 +293,14 @@ fun PortfolioDetailScreen(
                                     style = MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Text(
-                                    text = portfolioCoin.formattedUnrealizedPnL,
-                                    color = if (portfolioCoin.isPositiveUnrealizedPnL) Color.Green else Color.Red,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    ChangeIndicator(isPositive = portfolioCoin.isPositiveUnrealizedPnL)
+                                    Text(
+                                        text = portfolioCoin.formattedUnrealizedPnL,
+                                        color = if (portfolioCoin.isPositiveUnrealizedPnL) Color.Green else Color.Red,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.height(18.dp))

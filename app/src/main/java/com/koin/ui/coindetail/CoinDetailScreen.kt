@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.koin.components.ChangeIndicator
 import com.koin.data.coin.TimeRange
 import com.koin.ui.portfoliodetail.HorizontalFloatingToolBar
 import com.koin.ui.pricealert.CreatePriceAlertDialog
@@ -301,11 +302,14 @@ fun CoinDetailScreen(
                                     style = MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Text(
-                                    text = coin.formattedPriceChange,
-                                    color = if (coin.isPositive24h) Color.Green else Color.Red,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    ChangeIndicator(isPositive = coin.isPositive24h)
+                                    Text(
+                                        text = coin.formattedPriceChange,
+                                        color = if (coin.isPositive24h) Color.Green else Color.Red,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.height(18.dp))

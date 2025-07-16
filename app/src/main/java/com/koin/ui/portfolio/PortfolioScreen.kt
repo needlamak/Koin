@@ -84,6 +84,7 @@ import androidx.wear.compose.material.ExperimentalWearMaterialApi
 import androidx.wear.compose.material.FractionalThreshold
 import androidx.wear.compose.material.rememberSwipeableState
 import androidx.wear.compose.material.swipeable
+import com.koin.components.ChangeIndicator
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -423,8 +424,9 @@ private fun BalanceHeader(
         // Gain/Loss information
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp) // Reduced spacing
         ) {
+            ChangeIndicator(isPositive = portfolio.isPositiveUnrealizedPnL)
             Text(
                 text = portfolio.formattedUnrealizedPnL,
                 style = MaterialTheme.typography.titleMedium,
