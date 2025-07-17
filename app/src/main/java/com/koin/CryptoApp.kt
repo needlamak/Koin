@@ -31,14 +31,16 @@ class CryptoApp : Application(), Configuration.Provider {
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
+            .setMinimumLoggingLevel(android.util.Log.DEBUG) // ✅ Add this line
             .build()
+
 
     private fun setupPriceAlertWorker() {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val workRequest = PeriodicWorkRequestBuilder<PriceAlertWorker>(15, TimeUnit.MINUTES)
+        val workRequest = PeriodicWorkRequestBuilder<PriceAlertWorker>(15, TimeUnit.SECONDS)
             .setConstraints(constraints)
             .build()
 

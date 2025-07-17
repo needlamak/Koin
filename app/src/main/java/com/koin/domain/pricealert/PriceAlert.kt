@@ -11,7 +11,7 @@ data class PriceAlert(
     val isActive: Boolean = true,
     val isTriggered: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
-    val triggeredAt: Long? = null
+    val triggeredAt: Long? = System.currentTimeMillis()
 )
 
 enum class PriceAlertType {

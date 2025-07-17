@@ -57,6 +57,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -97,6 +98,7 @@ fun PortfolioDetailScreen(
     val scrollProgress = (scrollState.value / 500f).coerceIn(0f, 1f)
     val headerAlpha = 1f - scrollProgress
     val topBarContentAlpha = scrollProgress
+    val context = LocalContext.current
 
     fun onTimeRangeSelected(timeRange: TimeRange) {
         onEvent(PortfolioDetailUiEvent.TimeRangeSelected(timeRange))
@@ -111,7 +113,7 @@ fun PortfolioDetailScreen(
             onDismiss = { priceAlertViewModel.hideCreateAlertDialog() },
             onTargetPriceChange = { priceAlertViewModel.updateTargetPrice(it) },
             onAlertTypeChange = { priceAlertViewModel.updateAlertType(it) },
-            onCreateAlert = { priceAlertViewModel.createAlert() }
+            onCreateAlert = { priceAlertViewModel.createAlert(context) }
         )
     }
 

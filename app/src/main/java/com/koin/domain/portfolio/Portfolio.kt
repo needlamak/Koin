@@ -5,7 +5,7 @@ import java.util.Locale
 
 data class Portfolio(
     val balance: Double,
-    val holdings: List<*>,
+    val holdings: List<PortfolioHolding>,
     val transactions: List<Transaction>
 ) {
     // Core portfolio calculations
@@ -25,7 +25,7 @@ data class Portfolio(
         get() = balance + totalValue
     
     val portfolioPerformancePercentage: Double
-        get() = if (INITIAL_BALANCE > 0) ((totalPortfolioValue - INITIAL_BALANCE) / INITIAL_BALANCE) * 100 else 0.0
+        get() = ((totalPortfolioValue - INITIAL_BALANCE) / INITIAL_BALANCE) * 100
     
     // Formatted properties
     val formattedBalance: String

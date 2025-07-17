@@ -11,6 +11,7 @@ import com.koin.domain.portfolio.GetBalanceUseCase
 import com.koin.domain.portfolio.GetPortfolioUseCase
 import com.koin.domain.portfolio.Portfolio
 import com.koin.domain.portfolio.PortfolioBalance
+import com.koin.domain.portfolio.PortfolioHolding
 import com.koin.domain.portfolio.RefreshPortfolioUseCase
 import com.koin.domain.portfolio.ResetPortfolioUseCase
 import com.koin.domain.portfolio.SellCoinUseCase
@@ -74,7 +75,7 @@ class PortfolioViewModel @Inject constructor(
         _showSellDialog,
         _selectedCoinForSell
     ) { flows ->
-        val holdings = flows[0] as List<*>
+        val holdings = flows[0] as List<PortfolioHolding>
         val balance = flows[1] as PortfolioBalance?
         val isLoading = flows[2] as Boolean
         val error = flows[3] as String?
@@ -204,8 +205,7 @@ class PortfolioViewModel @Inject constructor(
                         Notification(
                             title = "Coin Purchased: ${coin.name}",
                             body = "You have successfully purchased $quantity of ${coin.name} for ${
-                                String.format(
-                                    Locale.US,
+                                String.format(Locale.US,
                                     "%.2f",
                                     quantity * coin.currentPrice
                                 )

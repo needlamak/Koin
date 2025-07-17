@@ -115,7 +115,7 @@ fun CoinDetailScreen(
             onDismiss = { priceAlertViewModel.hideCreateAlertDialog() },
             onTargetPriceChange = { priceAlertViewModel.updateTargetPrice(it) },
             onAlertTypeChange = { priceAlertViewModel.updateAlertType(it) },
-            onCreateAlert = { priceAlertViewModel.createAlert() }
+            onCreateAlert = { priceAlertViewModel.createAlert(context) }
         )
     }
 

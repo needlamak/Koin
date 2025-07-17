@@ -1,8 +1,17 @@
 package com.koin.ui.pricealert
 
+import android.content.Context
+import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.koin.data.pricealert.PriceAlertEntity
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.koin.app.pricealert.PriceAlertWorker
 import com.koin.domain.model.Coin
 import com.koin.domain.pricealert.CreatePriceAlertUseCase
 import com.koin.domain.pricealert.DeletePriceAlertUseCase
@@ -14,6 +23,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import timber.log.Timber
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltViewModel
@@ -84,7 +95,7 @@ class PriceAlertViewModel @Inject constructor(
         _createAlertState.value = _createAlertState.value.copy(alertType = type)
     }
 
-    fun createAlert() {
+    fun createAlert(context: Context) {
         val selectedCoin = _uiState.value.selectedCoin ?: return
         val targetPrice = _createAlertState.value.targetPrice.toDoubleOrNull() ?: return
 
@@ -103,19 +114,50 @@ class PriceAlertViewModel @Inject constructor(
             if (result.isSuccess) {
                 hideCreateAlertDialog()
                 loadPriceAlerts()
+
+                // ✅ 1. Log message
+                Timber.tag("PriceAlert")
+                    .d("Price alert created for ${selectedCoin.symbol.uppercase()} at $$targetPrice")
+
+                // ✅ 2. Toast message
+                Toast.makeText(
+                    context,
+                    "${selectedCoin.symbol.uppercase()} alert activated at $$targetPrice",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                // ✅ 3. Schedule periodic worker
+                // 🔁 Schedule periodic worker (if not already done)
+                val constraints = Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+
+                val periodicRequest =
+                    PeriodicWorkRequestBuilder<PriceAlertWorker>(15, TimeUnit.MINUTES)
+                        .setConstraints(constraints)
+                        .build()
+
+                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                    "price_alert_checker",
+                    ExistingPeriodicWorkPolicy.KEEP,
+                    periodicRequest
+                )
+
+                // ✅ Trigger immediate one-time work
+                val oneTimeRequest = OneTimeWorkRequestBuilder<PriceAlertWorker>()
+                    .setConstraints(constraints)
+                    .build()
+
+                WorkManager.getInstance(context).enqueue(oneTimeRequest)
+
+                Timber.tag("PriceAlert").d("One-time worker triggered immediately")
+
             } else {
                 _createAlertState.value = _createAlertState.value.copy(
                     isLoading = false,
                     error = result.exceptionOrNull()?.message
                 )
             }
-        }
-    }
-
-    fun deleteAlert(alertId: PriceAlertEntity) {
-        viewModelScope.launch {
-            deletePriceAlertUseCase(alertId)
-            loadPriceAlerts()
         }
     }
 }
