@@ -1,8 +1,6 @@
 package com.koin.data.coin
 
 import android.Manifest
-import android.content.Context
-import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.koin.app.pricealert.PriceAlertDao
 import com.koin.data.coin.dto.PriceDataPoint
@@ -12,7 +10,6 @@ import com.koin.domain.coin.CoinRepository
 import com.koin.domain.model.Coin
 import com.koin.domain.pricealert.PriceAlert
 import com.koin.domain.pricealert.PriceAlertType
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -21,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -61,7 +59,7 @@ class CoinRepositoryImpl @Inject constructor(
             }
         } catch (e: Exception) {
             val errorMsg = "Failed to load coins from cache: ${e.localizedMessage}"
-            Log.e("CoinRepositoryImpl", errorMsg, e)
+            Timber.tag("CoinRepositoryImpl").e(e, errorMsg)
             _lastError.value = errorMsg
         }
     }
@@ -89,12 +87,12 @@ class CoinRepositoryImpl @Inject constructor(
             }
         } catch (e: Exception) {
             val errorMsg = "Failed to refresh coins from network: ${e.localizedMessage}"
-            Log.e("CoinRepositoryImpl", errorMsg, e)
+            Timber.tag("CoinRepositoryImpl").e(e, errorMsg)
             _lastError.value = errorMsg
             if (_coins.value.isEmpty()) {
                 // Handle the case where there's no cached data
                 val noCacheMsg = "No cached data available. Please check your internet connection."
-                Log.e("CoinRepositoryImpl", noCacheMsg)
+                Timber.tag("CoinRepositoryImpl").e(noCacheMsg)
                 _lastError.value = noCacheMsg
             }
         }
@@ -159,7 +157,8 @@ class CoinRepositoryImpl @Inject constructor(
             coinDao.insertCoinChart(entity)
             data
         } catch (e: Exception) {
-            Log.e("CoinRepositoryImpl", "Error fetching market chart: ${e.localizedMessage}", e)
+            Timber.tag("CoinRepositoryImpl")
+                .e(e, "Error fetching market chart: ${e.localizedMessage}")
             emptyList()
         }
     }
@@ -185,33 +184,6 @@ class CoinRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
-
-//    // Add to existing CoinRepositoryImpl class
-//    override suspend fun createPriceAlert(alert: PriceAlert, context: Context): Result<Unit> {
-//        return try {
-//            val entity = PriceAlertEntity(
-//                id = alert.id,
-//                coinId = alert.coinId,
-//                coinName = alert.coinName,
-//                coinSymbol = alert.coinSymbol,
-//                coinImageUrl = alert.coinImageUrl,
-//                targetPrice = alert.targetPrice,
-//                alertType = alert.alertType.name,
-//                isActive = alert.isActive,
-//                isTriggered = alert.isTriggered,
-//                createdAt = alert.createdAt,
-//                triggeredAt = alert.triggeredAt
-//            )
-//            priceAlertDao.insertAlert(entity)
-//
-//            val workRequest = OneTimeWorkRequestBuilder<PriceAlertWorker>().build()
-//            WorkManager.getInstance(context).enqueue(workRequest)
-//
-//            Result.success(Unit)
-//        } catch (e: Exception) {
-//            Result.failure(e)
-//        }
-//    }
 
     override suspend fun deletePriceAlert(alertId: PriceAlertEntity): Result<Unit> {
         return try {

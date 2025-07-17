@@ -85,6 +85,7 @@ dependencies {
     implementation(libs.androidx.compose.material)
     ksp(libs.hilt.compiler) // Use hilt-compiler, not androidx.hilt.compiler
     implementation(libs.androidx.work.runtime.ktx)
+    androidTestImplementation ("androidx.work:work-testing:2.10.2")
 
     // Compose UI
     implementation(platform(libs.androidx.compose.bom))
