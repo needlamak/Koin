@@ -40,7 +40,7 @@ class CryptoApp : Application(), Configuration.Provider {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val workRequest = PeriodicWorkRequestBuilder<PriceAlertWorker>(15, TimeUnit.SECONDS)
+        val workRequest = PeriodicWorkRequestBuilder<PriceAlertWorker>(2, TimeUnit.MINUTES)
             .setConstraints(constraints)
             .build()
 

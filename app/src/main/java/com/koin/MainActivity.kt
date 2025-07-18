@@ -39,20 +39,27 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
+import com.koin.app.pricealert.PriceAlertServiceManager
 import com.koin.navigation.NavGraph
 import com.koin.ui.session.SessionViewModel
 import com.koin.ui.theme.KoinTheme
 import com.koin.util.NetworkMonitor
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var serviceManager: PriceAlertServiceManager
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            // Permission granted
+            // Permission granted - start service if needed
+            startPriceAlertService()
         } else {
             // Permission denied
             Toast.makeText(this, "Notification permission denied.", Toast.LENGTH_SHORT).show()
@@ -65,6 +72,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             KoinApp()
         }
+
+        // Add lifecycle observer
+        lifecycle.addObserver(serviceManager)
+
         requestNotificationPermission()
     }
 
@@ -76,10 +87,73 @@ class MainActivity : ComponentActivity() {
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                // Permission already granted
+                startPriceAlertService()
             }
+        } else {
+            // No permission needed for older versions
+            startPriceAlertService()
         }
     }
+
+    private fun startPriceAlertService() {
+        // Check if user has price alerts enabled
+        if (userHasPriceAlertsEnabled()) {
+            serviceManager.isServiceEnabled = true
+        }
+    }
+
+    private fun stopPriceAlertService() {
+        serviceManager.isServiceEnabled = false
+    }
+
+    private fun userHasPriceAlertsEnabled(): Boolean {
+        // Your logic to check if user has any active price alerts
+        return true // Replace with your actual logic
+    }
+
+    // Optional: Add this to handle when user disables all alerts
+    private fun onAllAlertsDisabled() {
+        stopPriceAlertService()
+    }
 }
+
+
+//@AndroidEntryPoint
+//class MainActivity : ComponentActivity() {
+//    private val requestPermissionLauncher = registerForActivityResult(
+//        ActivityResultContracts.RequestPermission()
+//    ) { isGranted: Boolean ->
+//        if (isGranted) {
+//            // Permission granted
+//        } else {
+//            // Permission denied
+//            Toast.makeText(this, "Notification permission denied.", Toast.LENGTH_SHORT).show()
+//        }
+//    }
+//
+//    override fun onCreate(savedInstanceState: Bundle?) {
+//        super.onCreate(savedInstanceState)
+//        enableEdgeToEdge()
+//        setContent {
+//            KoinApp()
+//        }
+//        requestNotificationPermission()
+//    }
+//
+//    private fun requestNotificationPermission() {
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//            if (ContextCompat.checkSelfPermission(
+//                    this,
+//                    Manifest.permission.POST_NOTIFICATIONS
+//                ) != PackageManager.PERMISSION_GRANTED
+//            ) {
+//                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+//            }
+//        }
+//    }
+//}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

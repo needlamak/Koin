@@ -13,7 +13,6 @@ import com.koin.domain.pricealert.PriceAlertType
 import timber.log.Timber
 import java.util.Locale
 
-// 2. Fix PriceAlertNotificationManager - ensure notification channel exists
 class PriceAlertNotificationManager(
     private val context: Context
 ) {

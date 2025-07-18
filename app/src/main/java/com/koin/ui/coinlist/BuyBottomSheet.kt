@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 
 @Composable
@@ -71,7 +72,7 @@ fun BuyBottomSheet(
             value = amount,
             onValueChange = { amount = it },
             label = { Text("Amount") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { onConfirm(amount.toDouble()) }) {

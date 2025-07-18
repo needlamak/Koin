@@ -41,19 +41,18 @@ class GetPriceAlertsUseCase(
         return repository.getAllPriceAlerts()
     }
 }
-
 class CheckPriceAlertsUseCase(
     private val repository: CoinRepository
 ) {
     suspend operator fun invoke(coins: List<Coin>): List<PriceAlertTrigger> {
         val triggers = mutableListOf<PriceAlertTrigger>()
-        
+
         for (coin in coins) {
             val alertsResult = repository.getActiveAlertsForCoin(coin.id).first()
             if (alertsResult.isSuccess) {
                 val alerts = alertsResult.getOrNull() ?: emptyList()
                 val triggeredAt = System.currentTimeMillis()
-                
+
                 for (alert in alerts) {
                     if (shouldTriggerAlert(alert, coin.currentPrice)) {
                         triggers.add(
@@ -69,10 +68,10 @@ class CheckPriceAlertsUseCase(
                 }
             }
         }
-        
+
         return triggers
     }
-    
+
     private fun shouldTriggerAlert(alert: PriceAlert, currentPrice: Double): Boolean {
         return when (alert.alertType) {
             PriceAlertType.ABOVE -> currentPrice >= alert.targetPrice
@@ -88,3 +87,4 @@ class DeletePriceAlertUseCase(
         return repository.deletePriceAlert(alertId)
     }
 }
+
