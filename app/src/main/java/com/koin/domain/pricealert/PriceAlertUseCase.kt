@@ -1,11 +1,50 @@
 package com.koin.domain.pricealert
 
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.koin.app.pricealert.PriceAlertWorker
 import com.koin.data.pricealert.PriceAlertEntity
 import com.koin.domain.coin.CoinRepository
 import com.koin.domain.model.Coin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import timber.log.Timber
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
+class SchedulePriceAlertWorkerUseCase @Inject constructor(
+    private val workManager: WorkManager
+) {
+    operator fun invoke() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        // Schedule periodic worker
+        val periodicRequest = PeriodicWorkRequestBuilder<PriceAlertWorker>(15, TimeUnit.MINUTES)
+            .setConstraints(constraints)
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            "price_alert_checker",
+            ExistingPeriodicWorkPolicy.KEEP,
+            periodicRequest
+        )
+
+        // Trigger immediate one-time work
+        val oneTimeRequest = OneTimeWorkRequestBuilder<PriceAlertWorker>()
+            .setConstraints(constraints)
+            .build()
+
+        workManager.enqueue(oneTimeRequest)
+
+        Timber.tag("PriceAlert").d("Worker scheduled and triggered immediately")
+    }
+}
 class CreatePriceAlertUseCase(
     private val repository: CoinRepository
 ) {

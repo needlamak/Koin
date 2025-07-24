@@ -8,29 +8,33 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.koin.ui.auth.AuthScreen
-import com.koin.ui.auth.AuthViewModel
+import androidx.navigation.navArgument
+import com.koin.authentication.presentation.SignUpScreen
+import com.koin.authentication.presentation.AuthViewModel
+import com.koin.authentication.presentation.ConfirmationScreen
+import com.koin.authentication.presentation.LoginScreen
 import com.koin.ui.coindetail.CoinDetailScreen
 import com.koin.ui.coindetail.CoinDetailViewModel
 import com.koin.ui.coinlist.CoinListScreen
 import com.koin.ui.coinlist.CoinListViewModel
+import com.koin.ui.notification.NotificationDetailScreen
+import com.koin.ui.notification.NotificationScreen
 import com.koin.ui.portfolio.PortfolioScreen
 import com.koin.ui.portfolio.PortfolioViewModel
 import com.koin.ui.portfoliodetail.PortfolioDetailScreen
 import com.koin.ui.portfoliodetail.PortfolioDetailViewModel
+import com.koin.ui.profile.EditProfileScreen
 import com.koin.ui.profile.ProfileScreen
 import com.koin.ui.profile.ProfileViewModel
-import com.koin.ui.profile.EditProfileScreen
 import com.koin.ui.settings.SettingsScreen
-import com.koin.ui.notification.NotificationScreen
-import com.koin.ui.notification.NotificationDetailScreen
 import com.koin.ui.splash.SplashScreen
 import com.koin.ui.totalbalance.TotalBalanceScreen
 import com.koin.ui.transactiondetail.TransactionDetailScreen
-import com.koin.ui.transactionsuccess.TransactionSuccessScreen
 import com.koin.ui.transactionhistory.TransactionHistoryScreen
+import com.koin.ui.transactionsuccess.TransactionSuccessScreen
 
 @Composable
 fun NavGraph(
@@ -38,16 +42,51 @@ fun NavGraph(
     modifier: Modifier = Modifier,
     showError: (String?) -> Unit
 ) {
+    val authViewModel = hiltViewModel<AuthViewModel>()
     NavHost(
         navController = navController,
-        startDestination = Screen.Splash.route,
+        startDestination = Screen.Login.route,
         modifier = modifier
     ) {
         // Splash
         composable(Screen.Splash.route) {
             SplashScreen(navController)
         }
+        composable(Screen.Login.route) {
+            LoginScreen(
+                authViewModel = authViewModel,
+                onNavigateToSignUp = { navController.navigate("signup") },
+                onNavigateToDashboard = {
+                    navController.navigate(
+                        Screen.Portfolio.route
+                    )
+                })
+        }
 
+        composable("signup") {
+            SignUpScreen(
+                onNavigateToLogin = {
+                    navController.popBackStack()
+                },
+                onNavigateToConfirmation = { email ->
+                    navController.navigate("confirmation/$email")
+                }
+            )
+        }
+        composable(
+            "confirmation/{email}",
+            arguments = listOf(navArgument("email") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val email = backStackEntry.arguments?.getString("email") ?: ""
+            ConfirmationScreen(
+                email = email,
+                onNavigateToLogin = {
+                    navController.navigate("login") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                }
+            )
+        }
         // Coin List
         composable(Screen.CoinList.route) {
             val viewModel: CoinListViewModel = hiltViewModel()
@@ -84,17 +123,17 @@ fun NavGraph(
         }
 
         // Auth
-        composable(Screen.Auth.route) {
-            val viewModel: AuthViewModel = hiltViewModel()
-            AuthScreen(
-                viewModel = viewModel,
-                onRegistered = {
-                    navController.navigate(Screen.Portfolio.route) {
-                        popUpTo(Screen.Auth.route) { inclusive = true }
-                    }
-                }
-            )
-        }
+//        composable(Screen.Auth.route) {
+//            val viewModel: AuthViewModel = hiltViewModel()
+//            AuthScreen(
+//                viewModel = viewModel,
+//                onRegistered = {
+//                    navController.navigate(Screen.Portfolio.route) {
+//                        popUpTo(Screen.Auth.route) { inclusive = true }
+//                    }
+//                }
+//            )
+//        }
 
         // Portfolio
         composable(Screen.Portfolio.route) {

@@ -2,13 +2,13 @@ package com.koin.app.pricealert
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
-import androidx.core.content.edit
 
 @Singleton
 class PriceAlertServiceManager @Inject constructor(
@@ -33,7 +33,7 @@ class PriceAlertServiceManager @Inject constructor(
 
     fun startService() {
         try {
-            PriceAlertService.start(context)
+            PriceAlertForegroundService.start(context)
             Timber.tag("ServiceManager").d("Service started")
         } catch (e: Exception) {
             Timber.tag("ServiceManager").e("Failed to start service: ${e.message}")
@@ -42,7 +42,7 @@ class PriceAlertServiceManager @Inject constructor(
 
     fun stopService() {
         try {
-            PriceAlertService.stop(context)
+            PriceAlertForegroundService.stop(context)
             Timber.tag("ServiceManager").d("Service stopped")
         } catch (e: Exception) {
             Timber.tag("ServiceManager").e("Failed to stop service: ${e.message}")

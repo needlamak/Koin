@@ -63,6 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.koin.components.ChangeIndicator
 import com.koin.data.coin.TimeRange
@@ -96,7 +97,17 @@ fun CoinDetailScreen(
             onEvent(CoinDetailUiEvent.ClearToast)
         }
     }
-
+//    // In your Composable
+//    LaunchedEffect(state.alertCreated) {
+//        if (state.alertCreated) {
+//            Toast.makeText(
+//                context,
+//                "${selectedCoin.symbol.uppercase()} alert activated at $${targetPrice}",
+//                Toast.LENGTH_SHORT
+//            ).show()
+//            viewModel.clearAlertCreatedFlag() // Reset the flag
+//        }
+//    }
     // Calculate scroll progress for animations
     val scrollProgress = (scrollState.value / 500f).coerceIn(0f, 1f)
     val headerAlpha = 1f - scrollProgress

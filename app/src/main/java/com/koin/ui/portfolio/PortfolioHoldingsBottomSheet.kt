@@ -1,5 +1,6 @@
 package com.koin.ui.portfolio
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Sell
@@ -100,7 +103,8 @@ private fun PortfolioHoldingItem(
     val sizePx = with(LocalDensity.current) { 140.dp.toPx() }
     val anchors = mapOf(0f to 0, -sizePx to 1)
 
-    Box(modifier = modifier) {
+    Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)
+        .clip(RoundedCornerShape(20))) {
         // Background with sell button
         Row(
             modifier = Modifier
@@ -135,12 +139,14 @@ private fun PortfolioHoldingItem(
         Card(
             modifier = Modifier
                 .offset { IntOffset(swipeableState.offset.value.roundToInt(), 0) }
+                .clip(RoundedCornerShape(0))
                 .swipeable(
                     state = swipeableState,
                     anchors = anchors,
                     thresholds = { _, _ -> FractionalThreshold(0.3f) },
                     orientation = Orientation.Horizontal
                 )
+                .fillMaxSize()
                 .clickable { onPortfolioCoinClick(holding.coinId) },
 
             colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)

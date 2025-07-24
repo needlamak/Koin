@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.koin.R
+import com.koin.navigation.Screen
 import com.koin.ui.session.SessionViewModel
 import kotlinx.coroutines.delay
 
@@ -33,9 +34,9 @@ fun SplashScreen(navController: NavController) {
     LaunchedEffect(isLoggedIn) {
         // Give the ViewModel a frame to emit.
         delay(150)
-        val target = if (isLoggedIn) "portfolio" else "auth"
+        val target = if (isLoggedIn) Screen.Portfolio.route else Screen.Login.route
         navController.navigate(target) {
-            popUpTo("splash") { inclusive = true }
+            popUpTo(Screen.Splash.route) { inclusive = true }
         }
     }
 

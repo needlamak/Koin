@@ -214,7 +214,7 @@ fun CreatePriceAlertDialog(
                 OutlinedTextField(
                     value = createAlertState.targetPrice,
                     onValueChange = onTargetPriceChange,
-                    label = { Text("Price") },
+                    placeholder = { Text("Enter target price") },
                     prefix = { Text("$") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                     modifier = Modifier.fillMaxWidth(),

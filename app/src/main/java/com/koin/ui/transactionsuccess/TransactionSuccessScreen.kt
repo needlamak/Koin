@@ -36,7 +36,7 @@ fun TransactionSuccessScreen(navController: NavController) {
             targetValue = 1f,
             animationSpec = tween(durationMillis = 500)
         )
-        delay(5000)
+        delay(2000)
         navController.navigate(Screen.Portfolio.route) {
             popUpTo(Screen.PortfolioCoinDetail.route) { inclusive = true }
         }

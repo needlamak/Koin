@@ -38,7 +38,8 @@ class CoinDetailViewModel @Inject constructor(
     private val coinId: String = checkNotNull(savedStateHandle["coinId"])
 
     override val _uiState: MutableStateFlow<CoinDetailUiState> =
-        MutableStateFlow(CoinDetailUiState(coinId = coinId))
+        MutableStateFlow(CoinDetailUiState(coinId = coinId,
+            alertCreated = false))
 
     init {
         // Initial load should not set isRefreshing to true for a 'pull' action,
@@ -203,5 +204,6 @@ data class CoinDetailUiState(
     val selectedTimeRange: TimeRange = TimeRange.ONE_DAY,
     val isInWatchlist: Boolean = false,
     val currentUserId: Long? = null,
-    val toastMessage: String? = null
+    val toastMessage: String? = null,
+    val alertCreated: Boolean
 )

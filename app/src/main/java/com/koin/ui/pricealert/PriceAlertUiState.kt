@@ -9,7 +9,8 @@ data class PriceAlertUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val showCreateDialog: Boolean = false,
-    val selectedCoin: Coin? = null
+    val selectedCoin: Coin? = null,
+    val alertCreated: Boolean = false
 )
 
 data class CreateAlertUiState(
