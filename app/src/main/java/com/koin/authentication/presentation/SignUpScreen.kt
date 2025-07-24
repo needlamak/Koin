@@ -35,6 +35,7 @@ fun SignUpScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToConfirmation: (String) -> Unit
 ) {
+    var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -64,6 +65,19 @@ fun SignUpScreen(
             text = "Create Account",
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 32.dp)
+        )
+
+        OutlinedTextField(
+            value = username,
+            onValueChange = { username = it },
+            label = { Text("Username") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Next
+            )
         )
 
         OutlinedTextField(
@@ -110,12 +124,12 @@ fun SignUpScreen(
         Button(
             onClick = {
                 authViewModel.signUp(
+                    username = username,
                     email = email,
-                    password = password,
-                    username = ""
+                    password = password
                 )
             },
-            enabled = !isLoading && email.isNotBlank() && password.isNotBlank() && password == confirmPassword,
+            enabled = !isLoading && username.isNotBlank() && email.isNotBlank() && password.isNotBlank() && password == confirmPassword,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)

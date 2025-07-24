@@ -12,8 +12,9 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.koin.authentication.presentation.SignUpScreen
 import com.koin.authentication.presentation.AuthViewModel
+import com.koin.authentication.presentation.SignUpScreen
+//import com.koin.authentication.presentation.AuthViewModel
 import com.koin.authentication.presentation.ConfirmationScreen
 import com.koin.authentication.presentation.LoginScreen
 import com.koin.ui.coindetail.CoinDetailScreen
@@ -45,7 +46,7 @@ fun NavGraph(
     val authViewModel = hiltViewModel<AuthViewModel>()
     NavHost(
         navController = navController,
-        startDestination = Screen.Login.route,
+        startDestination = Screen.Splash.route,
         modifier = modifier
     ) {
         // Splash
@@ -122,18 +123,7 @@ fun NavGraph(
             )
         }
 
-        // Auth
-//        composable(Screen.Auth.route) {
-//            val viewModel: AuthViewModel = hiltViewModel()
-//            AuthScreen(
-//                viewModel = viewModel,
-//                onRegistered = {
-//                    navController.navigate(Screen.Portfolio.route) {
-//                        popUpTo(Screen.Auth.route) { inclusive = true }
-//                    }
-//                }
-//            )
-//        }
+        
 
         // Portfolio
         composable(Screen.Portfolio.route) {
@@ -181,7 +171,7 @@ fun NavGraph(
             ProfileScreen(
                 viewModel = viewModel,
                 onLogout = {
-                    navController.navigate(Screen.Auth.route) {
+                    navController.navigate(Screen.Login.route) {
                         popUpTo(navController.graph.findStartDestination().id) {
                             inclusive = true
                         }
@@ -210,7 +200,7 @@ fun NavGraph(
         // Settings
         composable(Screen.Settings.route) {
             SettingsScreen(navController = navController, onLogout = {
-                navController.navigate(Screen.Auth.route) {
+                navController.navigate(Screen.Login.route) {
                     popUpTo(navController.graph.id) {
                         inclusive = true
                     }

@@ -50,8 +50,8 @@ fun EditProfileScreen(
     state.user?.let {
         EditProfileContent(
             user = it,
-            onSave = { name, email, bio ->
-                viewModel.onEvent(ProfileUiEvent.Save(name, email, bio, it.avatarUri))
+            onSave = { username, email ->
+                viewModel.onEvent(ProfileUiEvent.Save(username, email))
             },
             navController = navController
         )
@@ -62,12 +62,11 @@ fun EditProfileScreen(
 @Composable
 private fun EditProfileContent(
     user: User,
-    onSave: (String, String, String?) -> Unit,
+    onSave: (String, String) -> Unit,
     navController: NavController
 ) {
-    var name by remember { mutableStateOf(user.name) }
+    var username by remember { mutableStateOf(user.username) }
     var email by remember { mutableStateOf(user.email) }
-    var bio by remember { mutableStateOf(user.bio ?: "") }
     val emailValid = Patterns.EMAIL_ADDRESS.matcher(email).matches()
 
     Scaffold(
@@ -107,9 +106,9 @@ private fun EditProfileContent(
 
             // Form fields
             OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Name") },
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Username") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -129,23 +128,11 @@ private fun EditProfileContent(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = bio,
-                onValueChange = { bio = it },
-                label = { Text("Bio (optional)") },
-                singleLine = false,
-                minLines = 3,
-                maxLines = 5,
-                modifier = Modifier.fillMaxWidth()
-            )
-
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { onSave(name, email, bio) },
-                enabled = name.isNotBlank() && emailValid,
+                onClick = { onSave(username, email) },
+                enabled = username.isNotBlank() && emailValid,
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Text("Save Changes")

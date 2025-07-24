@@ -1,0 +1,47 @@
+import json
+import boto3
+import uuid
+import os
+from decimal import Decimal
+import time # Import time for timestamp if needed, though not directly used in this flow
+
+cognito_client = boto3.client('cognito-idp')
+dynamodb = boto3.resource('dynamodb')
+users_table = dynamodb.Table('koinapp-users-wallets')
+
+USER_POOL_ID = os.environ.get('USER_POOL_ID')
+APP_CLIENT_ID = os.environ.get('APP_CLIENT_ID')
+
+def lambda_handler(event, context):
+    print(f"Received event: {json.dumps(event)}")
+
+    try:
+        user_attributes = event['request']['userAttributes']
+        username = event['userName']
+        email = user_attributes.get('email')
+
+        if not all([username, email]):
+            print(f"Error: Missing username or email in Cognito event: {event}")
+            raise Exception("Missing username or email in Cognito event")
+
+        # Generate a unique wallet address
+        wallet_address = "0x" + str(uuid.uuid4()).replace('-', '')
+
+        # Store user details and wallet in DynamoDB
+        users_table.put_item(
+            Item={
+                'wallet_address': wallet_address,
+                'username': username,
+                'email': email,
+                'balance': Decimal('0.00')
+            }
+        )
+        print(f"User {username} with email {email} registered and wallet {wallet_address} added to DynamoDB.")
+
+        return event
+
+    except Exception as e:
+        print(f"Error in koinapp-register-user Lambda (Cognito Trigger): {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise # Re-raise the exception to indicate failure to Cognito

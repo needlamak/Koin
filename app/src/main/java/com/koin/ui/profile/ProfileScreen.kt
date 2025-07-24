@@ -100,7 +100,7 @@ private fun ProfileContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(user.name) },
+                title = { Text(user.username) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Box(

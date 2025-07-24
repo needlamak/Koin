@@ -56,7 +56,7 @@ class ProfileViewModel @Inject constructor(
 
     override fun handleEvent(event: ProfileUiEvent) {
         when (event) {
-            is ProfileUiEvent.Save -> save(event.name, event.email, event.bio, event.avatarUri)
+            is ProfileUiEvent.Save -> save(event.username, event.email)
             ProfileUiEvent.Refresh -> {
                 loadUser()
                 loadWatchlist()
@@ -65,15 +65,13 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    private fun save(name: String, email: String, bio: String?, avatarUri: String?) {
+    private fun save(username: String, email: String) {
         viewModelScope.launch {
             try {
                 val user = User(
                     id = _uiState.value.user?.id ?: 0,
-                    name = name,
-                    email = email,
-                    bio = bio,
-                    avatarUri = avatarUri
+                    username = username,
+                    email = email
                 )
                 repository.upsert(user)
             } catch (e: Exception) {
@@ -106,10 +104,8 @@ data class ProfileUiState(
 
 sealed class ProfileUiEvent {
     data class Save(
-        val name: String,
-        val email: String,
-        val bio: String?,
-        val avatarUri: String?
+        val username: String,
+        val email: String
     ) : ProfileUiEvent()
 
     object Refresh : ProfileUiEvent()

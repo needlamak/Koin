@@ -4,16 +4,14 @@ import com.koin.domain.user.User
 
 fun UserEntity.toDomain(): User = User(
     id = id,
-    name = name,
+    username = username,
     email = email,
-    avatarUri = avatarUri,
-    bio = bio
+    avatarUri = avatarUri
 )
 
 fun User.toEntity(): UserEntity = UserEntity(
     id = id,
-    name = name,
+    username = username,
     email = email,
-    avatarUri = avatarUri,
-    bio = bio
+    avatarUri = avatarUri
 )

@@ -45,6 +45,9 @@ class AuthViewModel @Inject constructor(
             _isLoading.value = true
             authRepository.signUp(email, password)
                 .onSuccess { message ->
+                    // wallet_address is generated on the backend and is not available at this stage.
+                    val user = com.koin.data.user.UserEntity(username = username, email = email)
+                    authRepository.upsertUser(user)
                     _authState.value = AuthState.SignUpSuccess(message)
                 }
                 .onFailure { error ->

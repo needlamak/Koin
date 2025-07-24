@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface UserDao {
-    @Query("SELECT * FROM users ORDER BY name ASC")
+    @Query("SELECT * FROM users ORDER BY username ASC")
     fun getAll(): Flow<List<UserEntity>>
 
     @Query("SELECT * FROM users WHERE id = :id LIMIT 1")
@@ -16,6 +16,9 @@ interface UserDao {
 
     @Upsert
     suspend fun upsert(user: UserEntity): Long
+
+    @Query ("SELECT * FROM users WHERE id = :id")
+    suspend fun getUser(id: Long): UserEntity?
 
     @Delete
     suspend fun delete(user: UserEntity)
