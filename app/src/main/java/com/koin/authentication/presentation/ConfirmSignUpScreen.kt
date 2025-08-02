@@ -36,7 +36,7 @@ import com.koin.util.showToast
 @Composable
 fun ConfirmationScreen(
     email: String,
-    authViewModel: AuthViewModel = hiltViewModel(),
+    authViewModel: CognitoAuthViewModel = hiltViewModel(),
     onNavigateToLogin: () -> Unit
 ) {
     var confirmationCode by remember { mutableStateOf("") }

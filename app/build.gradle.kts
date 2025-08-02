@@ -52,6 +52,11 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+        freeCompilerArgs += listOf(
+            "-Xopt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
+            "-Xopt-in=androidx.compose.material3.ExperimentalMaterial3Api"
+        )
+
     }
     buildFeatures {
         compose = true
@@ -64,6 +69,7 @@ ksp {
 }
 
 dependencies {
+    implementation("androidx.compose.animation:animation:1.8.3")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     implementation("com.amplifyframework:aws-auth-cognito:2.29.1")

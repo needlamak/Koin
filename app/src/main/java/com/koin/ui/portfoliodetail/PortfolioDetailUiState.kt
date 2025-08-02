@@ -13,5 +13,8 @@ data class PortfolioDetailUiState(
     val historicalData: List<PriceDataPoint> = emptyList(),
     val isLoadingHistoricalData: Boolean = false,
     val transactionSuccess: Boolean = false,
-    val soldCoinDetails: SellTransactionDetails? = null
+    val soldCoinDetails: SellTransactionDetails? = null,
+    val showBuyDialog: Boolean = false,
+    val showBuySuccessBottomSheet: Boolean = false,
+    val buyTransactionDetails: com.koin.ui.coinlist.BuyTransactionDetails? = null
 )

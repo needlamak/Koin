@@ -41,10 +41,12 @@ import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -63,11 +65,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.koin.components.ChangeIndicator
 import com.koin.data.coin.TimeRange
-import com.koin.ui.portfoliodetail.HorizontalFloatingToolBar
+import com.koin.ui.coinlist.BuyBottomSheet
+import com.koin.ui.coinlist.BuySuccessBottomSheet
+import com.koin.ui.composables.CoinDetailFloatingToolBar
+import com.koin.ui.composables.HorizontalFloatingToolBar
+import com.koin.ui.portfolio.SellCoinDialog
+import com.koin.ui.portfoliodetail.SellSuccessBottomSheet
 import com.koin.ui.pricealert.CreatePriceAlertDialog
 import com.koin.ui.pricealert.PriceAlertViewModel
 import java.text.NumberFormat
@@ -89,6 +95,75 @@ fun CoinDetailScreen(
 
     val priceAlertState by priceAlertViewModel.uiState.collectAsState()
     val createAlertState by priceAlertViewModel.createAlertState.collectAsState()
+
+    val sheetState = rememberModalBottomSheetState()
+
+    if (state.showBuyDialog) {
+        ModalBottomSheet(
+            onDismissRequest = { onEvent(CoinDetailUiEvent.HideBuyDialog) },
+            sheetState = sheetState
+        ) {
+            state.coin?.let { coin ->
+                BuyBottomSheet(
+                    coin = coin,
+                    onConfirm = { amount ->
+                        onEvent(CoinDetailUiEvent.BuyCoin(amount))
+                    }
+                )
+            }
+        }
+    }
+
+    if (state.showBuySuccessBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { onEvent(CoinDetailUiEvent.HideBuySuccessBottomSheet) },
+            sheetState = sheetState
+        ) {
+            state.buyTransactionDetails?.let { details ->
+                BuySuccessBottomSheet(
+                    coinName = details.coinName,
+                    coinSymbol = details.coinSymbol,
+                    coinImage = details.coinImage,
+                    quantity = details.quantity,
+                    totalPrice = details.totalPrice,
+                    onDismiss = { onEvent(CoinDetailUiEvent.HideBuySuccessBottomSheet) }
+                )
+            }
+        }
+    }
+
+    if (state.showSellDialog) {
+        ModalBottomSheet(
+            onDismissRequest = { onEvent(CoinDetailUiEvent.HideSellDialog) },
+            sheetState = sheetState
+        ) {
+            state.coin?.let { coin ->
+                SellCoinDialog(
+                    coin = coin,
+                    onDismiss = { onEvent(CoinDetailUiEvent.HideSellDialog) },
+                    onConfirm = { amount ->
+                        onEvent(CoinDetailUiEvent.SellCoin(amount))
+                    }
+                )
+            }
+        }
+    }
+
+    if (state.showSellSuccessBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { onEvent(CoinDetailUiEvent.HideSellSuccessBottomSheet) },
+            sheetState = sheetState
+        ) {
+            state.sellTransactionDetails?.let { details ->
+                SellSuccessBottomSheet(
+                    coinName = details.coinName,
+                    quantity = details.quantity,
+                    totalPrice = details.totalPrice,
+                    onDismiss = { onEvent(CoinDetailUiEvent.HideSellSuccessBottomSheet) }
+                )
+            }
+        }
+    }
 
     // Handle toast messages
     LaunchedEffect(state.toastMessage) {
@@ -229,16 +304,13 @@ fun CoinDetailScreen(
         },
         floatingActionButton = {
             coin?.let {
-                HorizontalFloatingToolBar(
+                CoinDetailFloatingToolBar(
                     onBuyClick = {
-                        // TODO: Navigate to Buy Screen
+                        onEvent(CoinDetailUiEvent.ShowBuyDialog)
                     },
                     onCreatePriceAlertClick = {
                         priceAlertViewModel.showCreateAlertDialog(it)
                     },
-                    onSellClick = {
-                        // TODO: Navigate to Sell Screen or show dialog
-                    }
                 )
             }
         },

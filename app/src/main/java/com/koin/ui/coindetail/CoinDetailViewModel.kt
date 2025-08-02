@@ -11,6 +11,12 @@ import com.koin.domain.watchlist.WatchlistItem
 import com.koin.app.notification.NotificationService
 import com.koin.domain.watchlist.WatchlistRepository
 import com.koin.ui.base.BaseViewModel
+import com.koin.domain.portfolio.BuyCoinUseCase
+import com.koin.domain.notification.Notification
+import com.koin.ui.coinlist.BuyTransactionDetails
+import com.koin.domain.portfolio.SellCoinUseCase
+import com.koin.ui.portfoliodetail.SellTransactionDetails
+import java.util.Locale
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
@@ -24,6 +30,14 @@ sealed class CoinDetailUiEvent {
     data class TimeRangeSelected(val timeRange: TimeRange) : CoinDetailUiEvent()
     object ToggleWatchlist : CoinDetailUiEvent()
     object ClearToast : CoinDetailUiEvent()
+    object ShowBuyDialog : CoinDetailUiEvent()
+    object HideBuyDialog : CoinDetailUiEvent()
+    data class BuyCoin(val amount: Double) : CoinDetailUiEvent()
+    object HideBuySuccessBottomSheet : CoinDetailUiEvent()
+    object ShowSellDialog : CoinDetailUiEvent()
+    object HideSellDialog : CoinDetailUiEvent()
+    data class SellCoin(val amount: Double) : CoinDetailUiEvent()
+    object HideSellSuccessBottomSheet : CoinDetailUiEvent()
 }
 
 @HiltViewModel
@@ -32,6 +46,9 @@ class CoinDetailViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val watchlistRepository: WatchlistRepository,
     private val notificationService: NotificationService,
+    private val buyCoinUseCase: BuyCoinUseCase,
+    private val sellCoinUseCase: SellCoinUseCase,
+    private val notificationRepository: com.koin.data.notification.NotificationRepository,
     savedStateHandle: SavedStateHandle
 ) : BaseViewModel<CoinDetailUiState, CoinDetailUiEvent>() {
 
@@ -66,6 +83,34 @@ class CoinDetailViewModel @Inject constructor(
             }
             is CoinDetailUiEvent.ClearToast -> {
                 _uiState.update { it.copy(toastMessage = null) }
+            }
+            is CoinDetailUiEvent.ShowBuyDialog -> {
+                _uiState.update { it.copy(showBuyDialog = true) }
+            }
+            is CoinDetailUiEvent.HideBuyDialog -> {
+                _uiState.update { it.copy(showBuyDialog = false) }
+            }
+            is CoinDetailUiEvent.BuyCoin -> {
+                _uiState.value.coin?.let { coin ->
+                    buyCoin(coin, event.amount)
+                }
+            }
+            is CoinDetailUiEvent.HideBuySuccessBottomSheet -> {
+                _uiState.update { it.copy(showBuySuccessBottomSheet = false) }
+            }
+            is CoinDetailUiEvent.ShowSellDialog -> {
+                _uiState.update { it.copy(showSellDialog = true) }
+            }
+            is CoinDetailUiEvent.HideSellDialog -> {
+                _uiState.update { it.copy(showSellDialog = false) }
+            }
+            is CoinDetailUiEvent.SellCoin -> {
+                _uiState.value.coin?.let { coin ->
+                    sellCoin(coin, event.amount)
+                }
+            }
+            is CoinDetailUiEvent.HideSellSuccessBottomSheet -> {
+                _uiState.update { it.copy(showSellSuccessBottomSheet = false) }
             }
         }
     }
@@ -191,6 +236,64 @@ class CoinDetailViewModel @Inject constructor(
             }
         }
     }
+
+    private fun buyCoin(coin: Coin, amount: Double) {
+        viewModelScope.launch {
+            try {
+                buyCoinUseCase(coin, amount)
+                val totalPrice = amount * coin.currentPrice
+                _uiState.update {
+                    it.copy(
+                        showBuySuccessBottomSheet = true,
+                        buyTransactionDetails = BuyTransactionDetails(
+                            coinName = coin.name,
+                            coinSymbol = coin.symbol,
+                            coinImage = coin.imageUrl,
+                            quantity = amount,
+                            totalPrice = totalPrice
+                        ),
+                        showBuyDialog = false // Hide the buy dialog after successful purchase
+                    )
+                }
+                notificationRepository.insert(
+                    Notification(
+                        title = "Coin Purchased: ${coin.name}",
+                        body = "You have successfully purchased $amount of ${coin.name} for ${String.format(Locale.US, "%.2f", totalPrice)}."
+                    )
+                )
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to buy coin: ${e.message}") }
+            }
+        }
+    }
+
+    private fun sellCoin(coin: Coin, amount: Double) {
+        viewModelScope.launch {
+            try {
+                sellCoinUseCase(coin.id, amount, coin.currentPrice)
+                val totalPrice = amount * coin.currentPrice
+                _uiState.update {
+                    it.copy(
+                        showSellSuccessBottomSheet = true,
+                        sellTransactionDetails = SellTransactionDetails(
+                            coinName = coin.name,
+                            quantity = amount,
+                            totalPrice = totalPrice
+                        ),
+                        showSellDialog = false // Hide the sell dialog after successful purchase
+                    )
+                }
+                notificationRepository.insert(
+                    Notification(
+                        title = "Coin Sold: ${coin.name}",
+                        body = "You have successfully sold $amount of ${coin.name} for ${String.format(Locale.US, "%.2f", totalPrice)}."
+                    )
+                )
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to sell coin: ${e.message}") }
+            }
+        }
+    }
 }
 
 data class CoinDetailUiState(
@@ -205,5 +308,11 @@ data class CoinDetailUiState(
     val isInWatchlist: Boolean = false,
     val currentUserId: Long? = null,
     val toastMessage: String? = null,
-    val alertCreated: Boolean
+    val alertCreated: Boolean,
+    val showBuyDialog: Boolean = false,
+    val showBuySuccessBottomSheet: Boolean = false,
+    val buyTransactionDetails: BuyTransactionDetails? = null,
+    val showSellDialog: Boolean = false,
+    val showSellSuccessBottomSheet: Boolean = false,
+    val sellTransactionDetails: SellTransactionDetails? = null
 )

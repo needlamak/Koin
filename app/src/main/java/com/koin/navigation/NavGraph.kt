@@ -1,5 +1,7 @@
 package com.koin.navigation
 
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -12,7 +14,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.koin.authentication.presentation.AuthViewModel
+import com.koin.authentication.presentation.CognitoAuthViewModel
 import com.koin.authentication.presentation.SignUpScreen
 //import com.koin.authentication.presentation.AuthViewModel
 import com.koin.authentication.presentation.ConfirmationScreen
@@ -37,30 +39,40 @@ import com.koin.ui.transactiondetail.TransactionDetailScreen
 import com.koin.ui.transactionhistory.TransactionHistoryScreen
 import com.koin.ui.transactionsuccess.TransactionSuccessScreen
 
+// Define reusable transitions at the top of your file or in a separate file
+val slideInFromRight = slideInHorizontally(initialOffsetX = { it })
+val slideOutToLeft = slideOutHorizontally(targetOffsetX = { -it })
+val slideInFromLeft = slideInHorizontally(initialOffsetX = { -it })
+val slideOutToRight = slideOutHorizontally(targetOffsetX = { it })
+
 @Composable
 fun NavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
     showError: (String?) -> Unit
 ) {
-    val authViewModel = hiltViewModel<AuthViewModel>()
+    val authViewModel = hiltViewModel<CognitoAuthViewModel>()
     NavHost(
         navController = navController,
         startDestination = Screen.Splash.route,
-        modifier = modifier
+        modifier = modifier,
+        // Apply default transitions to the entire NavHost
+        enterTransition = { slideInFromRight },
+        exitTransition = { slideOutToLeft },
+        popEnterTransition = { slideInFromLeft },
+        popExitTransition = { slideOutToRight }
     ) {
-        // Splash
+        // Now all composables inherit the transitions automatically
         composable(Screen.Splash.route) {
             SplashScreen(navController)
         }
+
         composable(Screen.Login.route) {
             LoginScreen(
                 authViewModel = authViewModel,
                 onNavigateToSignUp = { navController.navigate("signup") },
                 onNavigateToDashboard = {
-                    navController.navigate(
-                        Screen.Portfolio.route
-                    )
+                    navController.navigate(Screen.Portfolio.route)
                 })
         }
 
@@ -74,6 +86,7 @@ fun NavGraph(
                 }
             )
         }
+
         composable(
             "confirmation/{email}",
             arguments = listOf(navArgument("email") { type = NavType.StringType })
@@ -88,7 +101,7 @@ fun NavGraph(
                 }
             )
         }
-        // Coin List
+
         composable(Screen.CoinList.route) {
             val viewModel: CoinListViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsState()
@@ -107,7 +120,6 @@ fun NavGraph(
             )
         }
 
-        // Coin Detail
         composable(Screen.CoinDetail.route) {
             val viewModel: CoinDetailViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsState()
@@ -123,9 +135,6 @@ fun NavGraph(
             )
         }
 
-        
-
-        // Portfolio
         composable(Screen.Portfolio.route) {
             val viewModel: PortfolioViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsState()
@@ -146,7 +155,6 @@ fun NavGraph(
             )
         }
 
-        // Portfolio Coin Detail
         composable(Screen.PortfolioCoinDetail.route) {
             val viewModel: PortfolioDetailViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsState()
@@ -165,7 +173,6 @@ fun NavGraph(
             )
         }
 
-        // Profile
         composable(Screen.Profile.route) {
             val viewModel: ProfileViewModel = hiltViewModel()
             ProfileScreen(
@@ -182,22 +189,18 @@ fun NavGraph(
             )
         }
 
-        // Transaction Success
         composable(Screen.TransactionSuccess.route) {
             TransactionSuccessScreen(navController)
         }
 
-        // Transaction History
         composable(Screen.TransactionHistory.route) {
             TransactionHistoryScreen(navController)
         }
 
-        // Transaction Detail
         composable(Screen.TransactionDetail.route) {
             TransactionDetailScreen(navController)
         }
 
-        // Settings
         composable(Screen.Settings.route) {
             SettingsScreen(navController = navController, onLogout = {
                 navController.navigate(Screen.Login.route) {
@@ -208,17 +211,14 @@ fun NavGraph(
             })
         }
 
-        // Edit Profile
         composable(Screen.EditProfile.route) {
             EditProfileScreen(navController)
         }
 
-        // Notification List
         composable(Screen.Notification.route) {
             NotificationScreen(navController)
         }
 
-        // Notification Detail
         composable(Screen.NotificationDetail.route) {
             val notificationId = it.arguments?.getString("notificationId")?.toLongOrNull()
             if (notificationId != null) {
@@ -226,7 +226,6 @@ fun NavGraph(
             }
         }
 
-        // Total Balance Screen
         composable(Screen.TotalBalance.route) {
             TotalBalanceScreen(navController = navController)
         }

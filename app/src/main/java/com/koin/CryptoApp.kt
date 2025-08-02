@@ -1,13 +1,6 @@
 package com.koin
 
-import android.annotation.SuppressLint
 import android.app.Application
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.os.PowerManager
-import android.provider.Settings
-import androidx.core.content.edit
-import androidx.core.net.toUri
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.BackoffPolicy
 import androidx.work.Configuration
@@ -17,7 +10,6 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.amplifyframework.AmplifyException
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
 import com.amplifyframework.core.Amplify
 import com.koin.app.pricealert.PriceAlertForegroundService
@@ -44,17 +36,10 @@ class CryptoApp : Application(), Configuration.Provider {
         // To stop monitoring
         PriceAlertForegroundService.stop(this)
         setupPriceAlertWorker()
-        if (shouldRequestBatteryOptimization()) {
-            requestIgnoreBatteryOptimization()
-            markBatteryOptimizationRequested()
-        }
-        try {
-            Amplify.addPlugin(AWSCognitoAuthPlugin())
-            Amplify.configure(applicationContext)
-            Timber.tag("KoinApp").i("Initialized Amplify")
-        } catch (error: AmplifyException) {
-            Timber.tag("KoinApp").e(error, "Could not initialize Amplify")
-        }
+
+        Amplify.addPlugin(AWSCognitoAuthPlugin())
+        Amplify.configure(applicationContext)
+        Timber.tag("KoinApp").i("Initialized Amplify")
     }
 
     override val workManagerConfiguration: Configuration
@@ -97,35 +82,6 @@ class CryptoApp : Application(), Configuration.Provider {
                 workInfos?.forEach { workInfo ->
                     Timber.tag("WorkManager").d("Work status: ${workInfo.state}")
                 }
-            }
-    }
-
-    @SuppressLint("BatteryLife")
-    private fun requestIgnoreBatteryOptimization() {
-        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
-
-        if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                data = "package:$packageName".toUri()
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            try {
-                startActivity(intent)
-            } catch (_: ActivityNotFoundException) {
-                Timber.tag("CryptoApp").w("Cannot open battery optimization settings")
-            }
-        }
-    }
-
-    private fun shouldRequestBatteryOptimization(): Boolean {
-        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
-        return !prefs.getBoolean("battery_optimization_requested", false)
-    }
-
-    private fun markBatteryOptimizationRequested() {
-        getSharedPreferences("app_prefs", MODE_PRIVATE)
-            .edit {
-                putBoolean("battery_optimization_requested", true)
             }
     }
 }

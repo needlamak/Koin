@@ -14,7 +14,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun LoginScreen(
-    authViewModel: AuthViewModel = hiltViewModel(),
+    authViewModel: CognitoAuthViewModel = hiltViewModel(),
     onNavigateToSignUp: () -> Unit,
     onNavigateToDashboard: () -> Unit
 ) {
