@@ -14,17 +14,18 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.koin.authentication.presentation.CognitoAuthViewModel
-import com.koin.authentication.presentation.SignUpScreen
+import com.koin.ui.authentication.CognitoAuthViewModel
+import com.koin.ui.authentication.SignUpScreen
 //import com.koin.authentication.presentation.AuthViewModel
-import com.koin.authentication.presentation.ConfirmationScreen
-import com.koin.authentication.presentation.LoginScreen
+import com.koin.ui.authentication.ConfirmationScreen
+import com.koin.ui.authentication.LoginScreen
 import com.koin.ui.coindetail.CoinDetailScreen
 import com.koin.ui.coindetail.CoinDetailViewModel
 import com.koin.ui.coinlist.CoinListScreen
 import com.koin.ui.coinlist.CoinListViewModel
 import com.koin.ui.notification.NotificationDetailScreen
 import com.koin.ui.notification.NotificationScreen
+import com.koin.ui.onboarding.OnboardingScreen
 import com.koin.ui.portfolio.PortfolioScreen
 import com.koin.ui.portfolio.PortfolioViewModel
 import com.koin.ui.portfoliodetail.PortfolioDetailScreen
@@ -66,6 +67,18 @@ fun NavGraph(
         composable(Screen.Splash.route) {
             SplashScreen(navController)
         }
+        composable(
+            route = Screen.Onboarding.route
+        ) {
+            OnboardingScreen(
+                onFinish = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
 
         composable(Screen.Login.route) {
             LoginScreen(
@@ -76,7 +89,7 @@ fun NavGraph(
                 })
         }
 
-        composable("signup") {
+        composable(Screen.SignUp.route) {
             SignUpScreen(
                 onNavigateToLogin = {
                     navController.popBackStack()
@@ -94,9 +107,9 @@ fun NavGraph(
             val email = backStackEntry.arguments?.getString("email") ?: ""
             ConfirmationScreen(
                 email = email,
-                onNavigateToLogin = {
-                    navController.navigate("login") {
-                        popUpTo("login") { inclusive = true }
+                onNavigateToPortfolio = {
+                    navController.navigate( Screen.Portfolio.route) {
+                        popUpTo( Screen.Portfolio.route) { inclusive = true }
                     }
                 }
             )

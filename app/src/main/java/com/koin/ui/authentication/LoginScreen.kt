@@ -1,4 +1,4 @@
-package com.koin.authentication.presentation
+package com.koin.ui.authentication
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions

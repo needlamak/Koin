@@ -1,7 +1,7 @@
-package com.koin.authentication.di // Or your appropriate package name for dependency injection modules
+package com.koin.di
 
-import com.koin.authentication.data.AuthRepository
-import com.koin.authentication.data.AuthRepositoryImpl
+import com.koin.data.auth.data.AuthRepository
+import com.koin.data.auth.data.AuthRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

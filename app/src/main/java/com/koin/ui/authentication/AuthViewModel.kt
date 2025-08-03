@@ -1,8 +1,8 @@
-package com.koin.authentication.presentation
+package com.koin.ui.authentication
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.koin.authentication.data.AuthRepository
+import com.koin.data.auth.data.AuthRepository
 import com.koin.data.session.SessionManager
 import com.koin.data.user.UserEntity
 import com.koin.data.user.toDomain

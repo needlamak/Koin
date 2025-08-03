@@ -7,16 +7,27 @@ import com.koin.data.pricealert.PriceAlertEntity
 import com.koin.domain.model.Coin
 import com.koin.domain.pricealert.PriceAlert
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
+// Repository interface update
 interface CoinRepository {
     fun getAllCoins(): Flow<Result<List<Coin>>>
     fun getCoinById(id: String?): Flow<Result<Coin?>>
-    suspend fun refreshCoins()
+    suspend fun refreshCoins(): Result<Unit> // Changed return type
     suspend fun getCoinMarketChart(
         coinId: String,
         timeRange: TimeRange,
-        vsCurrency: String = "usd"
+        vsCurrency: String
     ): List<PriceDataPoint>
+    val lastError: StateFlow<String?> // Expose error state
+//    fun getAllCoins(): Flow<Result<List<Coin>>>
+//    fun getCoinById(id: String?): Flow<Result<Coin?>>
+//    suspend fun refreshCoins()
+//    suspend fun getCoinMarketChart(
+//        coinId: String,
+//        timeRange: TimeRange,
+//        vsCurrency: String = "usd"
+//    ): List<PriceDataPoint>
 
     // Add to existing CoinRepository interface
     suspend fun createPriceAlert(alert: PriceAlert): Result<Unit>

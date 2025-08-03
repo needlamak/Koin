@@ -172,17 +172,6 @@ fun CoinDetailScreen(
             onEvent(CoinDetailUiEvent.ClearToast)
         }
     }
-//    // In your Composable
-//    LaunchedEffect(state.alertCreated) {
-//        if (state.alertCreated) {
-//            Toast.makeText(
-//                context,
-//                "${selectedCoin.symbol.uppercase()} alert activated at $${targetPrice}",
-//                Toast.LENGTH_SHORT
-//            ).show()
-//            viewModel.clearAlertCreatedFlag() // Reset the flag
-//        }
-//    }
     // Calculate scroll progress for animations
     val scrollProgress = (scrollState.value / 500f).coerceIn(0f, 1f)
     val headerAlpha = 1f - scrollProgress

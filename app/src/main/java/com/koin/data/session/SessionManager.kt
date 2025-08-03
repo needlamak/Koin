@@ -20,6 +20,10 @@ class SessionManager @Inject constructor(
     companion object {
         private val KEY_LOGGED_IN = booleanPreferencesKey("logged_in")
         private val KEY_USER_ID = longPreferencesKey("user_id")
+
+        private val HAS_SEEN_ONBOARDING = booleanPreferencesKey("has_seen_onboarding")
+        // Settings
+        private val IS_BIOMETRIC_ENABLED = booleanPreferencesKey("is_biometric_enabled")
     }
 
     val isLoggedIn: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -43,4 +47,28 @@ class SessionManager @Inject constructor(
             prefs.remove(KEY_USER_ID)
         }
     }
+
+    // Onboarding
+    suspend fun setOnboardingSeen(seen: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[HAS_SEEN_ONBOARDING] = seen
+        }
+    }
+
+    val hasSeenOnboarding: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[HAS_SEEN_ONBOARDING] ?: false
+    }
+
+    // Settings
+    suspend fun setBiometricEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[IS_BIOMETRIC_ENABLED] = enabled
+        }
+    }
+
+    val isBiometricEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[IS_BIOMETRIC_ENABLED] ?: false
+    }
+
+
 }

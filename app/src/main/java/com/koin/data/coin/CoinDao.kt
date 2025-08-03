@@ -4,6 +4,11 @@ import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 @Dao
 interface CoinDao {
+    @Transaction
+    suspend fun refreshCoins(coins: List<CoinEntity>) {
+        deleteAllCoins()
+        insertAll(coins)
+    }
     @Query("SELECT * FROM coins ORDER BY marketCapRank ASC")
     fun getAllCoins(): Flow<List<CoinEntity>>
 

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -159,10 +160,11 @@ fun LoadingState() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(48.dp),
-            color = MaterialTheme.colorScheme.primary
-        )
+        CircularWavyProgressIndicator()
+//        CircularProgressIndicator(
+//            modifier = Modifier.size(48.dp),
+//            color = MaterialTheme.colorScheme.primary
+//        )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Loading coins...",

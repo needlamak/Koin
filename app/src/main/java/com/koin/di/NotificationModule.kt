@@ -1,4 +1,4 @@
-package com.koin.app.di
+package com.koin.di
 
 import android.content.Context
 import com.koin.app.notification.NotificationService

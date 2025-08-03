@@ -1,5 +1,5 @@
 // feature_auth/presentation/SignUpScreen.kt
-package com.koin.authentication.presentation
+package com.koin.ui.authentication
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

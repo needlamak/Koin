@@ -1,6 +1,6 @@
-package com.koin.authentication.api
+package com.koin.app.api
 
-import com.koin.authentication.data.AuthRepository
+import com.koin.data.auth.data.AuthRepository
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response

@@ -1,4 +1,4 @@
-package com.koin.authentication.data // Ensure this matches your actual package
+package com.koin.data.auth.data // Ensure this matches your actual package
 
 import com.amplifyframework.auth.AuthException
 import com.amplifyframework.auth.AuthUserAttributeKey
@@ -7,6 +7,7 @@ import com.amplifyframework.auth.options.AuthSignUpOptions
 import com.amplifyframework.auth.result.AuthSignInResult
 import com.amplifyframework.auth.result.AuthSignUpResult
 import com.amplifyframework.core.Amplify
+import com.koin.data.user.UserDao
 import com.koin.data.user.UserEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -19,7 +20,7 @@ import kotlin.coroutines.resume
  * @Inject constructor() tells Hilt how to create an instance of this class.
  */
 class AuthRepositoryImpl @Inject constructor(
-    private val userDao: com.koin.data.user.UserDao
+    private val userDao: UserDao
 ) : AuthRepository { // Add @Inject to the constructor
 
     override suspend fun signUp(email: String, password: String): Result<String> =

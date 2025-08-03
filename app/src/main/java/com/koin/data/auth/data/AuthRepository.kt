@@ -1,4 +1,4 @@
-package com.koin.authentication.data
+package com.koin.data.auth.data
 
 import com.koin.data.user.UserEntity
 
